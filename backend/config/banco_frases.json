@@ -1,0 +1,482 @@
+[
+  {
+    "id": 1,
+    "pov_text": "POV: você entrou no grupo de promoções certo",
+    "caption_text": "🔥 Achadinho do dia! Quer receber promoções como essa todos os dias? Entre no grupo gratuito pelo link da bio. #achadinhos #promocoes #ofertas #cupons",
+    "categoria": "Geral",
+    "tom": "Economia",
+    "ativo": "Sim"
+  },
+  {
+    "id": 2,
+    "pov_text": "POV: você descobriu onde ficam os melhores achadinhos",
+    "caption_text": "🛒 Produto útil, barato e perfeito para quem gosta de economizar. Link do grupo gratuito na bio. #achadinhos #shopee #descontos",
+    "categoria": "Geral",
+    "tom": "Economia",
+    "ativo": "Sim"
+  },
+  {
+    "id": 3,
+    "pov_text": "POV: você nunca mais pagou caro nas compras",
+    "caption_text": "💸 Promoção boa acaba rápido. Entre no grupo gratuito e receba os achadinhos primeiro. #ofertas #promocoes #cupons",
+    "categoria": "Ofertas",
+    "tom": "Urgência",
+    "ativo": "Sim"
+  },
+  {
+    "id": 4,
+    "pov_text": "POV: você recebeu essa oferta antes de acabar",
+    "caption_text": "⚡ Oferta encontrada pra você! Quer ver mais produtos com preço bom? Entra no grupo gratuito pelo link da bio. #ofertas #descontos",
+    "categoria": "Ofertas",
+    "tom": "Urgência",
+    "ativo": "Sim"
+  },
+  {
+    "id": 5,
+    "pov_text": "POV: você parou de comprar sem cupom",
+    "caption_text": "🎟️ Cupom, promoção e achadinho todos os dias. Entra no grupo gratuito para receber primeiro. #cupons #promocoes #achadinhos",
+    "categoria": "Cupons",
+    "tom": "Economia",
+    "ativo": "Sim"
+  },
+  {
+    "id": 6,
+    "pov_text": "POV: você achou um grupo que manda promoção de verdade",
+    "caption_text": "🔥 Aqui é promoção selecionada, sem enrolação. Quer receber no WhatsApp? Link do grupo gratuito na bio. #promocoes #ofertas",
+    "categoria": "Geral",
+    "tom": "Economia",
+    "ativo": "Sim"
+  },
+  {
+    "id": 7,
+    "pov_text": "POV: você viu essa oferta antes de todo mundo",
+    "caption_text": "👀 Algumas ofertas acabam rápido. Entre no grupo gratuito e receba os alertas primeiro. #achadinhos #ofertas #descontos",
+    "categoria": "Ofertas",
+    "tom": "Urgência",
+    "ativo": "Sim"
+  },
+  {
+    "id": 8,
+    "pov_text": "POV: seu carrinho ficou cheio de desconto",
+    "caption_text": "🛒 Achadinhos, cupons e ofertas para economizar de verdade. Link do grupo gratuito na bio. #compras #promocoes",
+    "categoria": "Geral",
+    "tom": "Economia",
+    "ativo": "Sim"
+  },
+  {
+    "id": 9,
+    "pov_text": "POV: você encontrou o achadinho que precisava",
+    "caption_text": "✨ Produto útil passando na sua tela! Quer receber ofertas assim todos os dias? Entra no grupo gratuito. #achadinhos #ofertas",
+    "categoria": "Geral",
+    "tom": "Economia",
+    "ativo": "Sim"
+  },
+  {
+    "id": 10,
+    "pov_text": "POV: o cupom funcionou e o preço caiu",
+    "caption_text": "🎉 Quando o cupom entra, a compra fica melhor. Receba cupons e promoções no grupo gratuito. Link na bio. #cupons #descontos",
+    "categoria": "Cupons",
+    "tom": "Economia",
+    "ativo": "Sim"
+  },
+  {
+    "id": 11,
+    "pov_text": "POV: você entrou só para olhar e já salvou uma oferta",
+    "caption_text": "😅 Achadinho bom é assim: aparece e dá vontade de comprar. Quer receber mais? Link do grupo na bio. #achadinhos",
+    "categoria": "Ofertas",
+    "tom": "Economia",
+    "ativo": "Sim"
+  },
+  {
+    "id": 12,
+    "pov_text": "POV: você economizou porque recebeu a oferta primeiro",
+    "caption_text": "⏰ Promoção boa não espera. Entre no grupo gratuito e veja os achadinhos antes de acabar. #promocoes #ofertas",
+    "categoria": "Ofertas",
+    "tom": "Urgência",
+    "ativo": "Sim"
+  },
+  {
+    "id": 13,
+    "pov_text": "POV: você encontrou um produto útil gastando pouco",
+    "caption_text": "✅ Produto prático, barato e com cara de compra inteligente. Link do grupo gratuito na bio. #achadinhos #casa",
+    "categoria": "Casa/Utilidades",
+    "tom": "Economia",
+    "ativo": "Sim"
+  },
+  {
+    "id": 14,
+    "pov_text": "POV: você descobriu o jeito certo de comprar online",
+    "caption_text": "🧠 Comprar com desconto é melhor. Receba achadinhos e cupons no grupo gratuito. Link na bio. #descontos #comprasonline",
+    "categoria": "Geral",
+    "tom": "Economia",
+    "ativo": "Sim"
+  },
+  {
+    "id": 15,
+    "pov_text": "POV: você achou uma promoção que vale a pena",
+    "caption_text": "🔥 Oferta selecionada para quem gosta de economizar. Entre no grupo gratuito pelo link da bio. #promocao #achadinhos",
+    "categoria": "Geral",
+    "tom": "Economia",
+    "ativo": "Sim"
+  },
+  {
+    "id": 16,
+    "pov_text": "POV: você não compra mais no preço cheio",
+    "caption_text": "💸 Antes de comprar, confere o grupo. Tem promoção, cupom e achadinho todos os dias. Link na bio. #ofertas #cupons",
+    "categoria": "Geral",
+    "tom": "Urgência",
+    "ativo": "Sim"
+  },
+  {
+    "id": 17,
+    "pov_text": "POV: você descobriu o grupo que garimpa por você",
+    "caption_text": "🔎 A gente garimpa, você economiza. Entre no grupo gratuito e receba ofertas todos os dias. #achadinhos #promocoes",
+    "categoria": "Geral",
+    "tom": "Economia",
+    "ativo": "Sim"
+  },
+  {
+    "id": 18,
+    "pov_text": "POV: você achou o produto que todo mundo procura",
+    "caption_text": "👀 Achadinho com preço bom passando aqui. Quer receber primeiro? Link do grupo gratuito na bio. #ofertas #achadinhos",
+    "categoria": "Geral",
+    "tom": "Economia",
+    "ativo": "Sim"
+  },
+  {
+    "id": 19,
+    "pov_text": "POV: você viu esse achadinho e já pensou em comprar",
+    "caption_text": "🛍️ Esse é daqueles produtos úteis que valem conferir. Receba mais no grupo gratuito. #achadinhos #shopee",
+    "categoria": "Geral",
+    "tom": "Economia",
+    "ativo": "Sim"
+  },
+  {
+    "id": 20,
+    "pov_text": "POV: você entrou no grupo e começou a economizar",
+    "caption_text": "💰 Quer economizar nas compras online? Entre no grupo gratuito pelo link da bio. #promocoes #descontos",
+    "categoria": "Geral",
+    "tom": "Economia",
+    "ativo": "Sim"
+  },
+  {
+    "id": 21,
+    "pov_text": "POV: você descobriu a oferta que ninguém te contou",
+    "caption_text": "🤫 Oferta boa passando por aqui. Quer receber mais achadinhos? Link do grupo gratuito na bio. #ofertas",
+    "categoria": "Ofertas",
+    "tom": "Economia",
+    "ativo": "Sim"
+  },
+  {
+    "id": 22,
+    "pov_text": "POV: você achou o presente perfeito pagando menos",
+    "caption_text": "🎁 Achadinho com preço bom para presentear ou comprar pra você. Entra no grupo gratuito. #achadinhos #presentes",
+    "categoria": "Geral",
+    "tom": "Economia",
+    "ativo": "Sim"
+  },
+  {
+    "id": 23,
+    "pov_text": "POV: você viu essa promoção no momento certo",
+    "caption_text": "⚡ Promoções mudam rápido. Entre no grupo gratuito e receba os alertas no WhatsApp. #promocoes #ofertas",
+    "categoria": "Ofertas",
+    "tom": "Urgência",
+    "ativo": "Sim"
+  },
+  {
+    "id": 24,
+    "pov_text": "POV: você começou a comprar com estratégia",
+    "caption_text": "📲 Quem recebe oferta primeiro economiza mais. Entre no grupo gratuito pelo link da bio. #cupons #achadinhos",
+    "categoria": "Geral",
+    "tom": "Economia",
+    "ativo": "Sim"
+  },
+  {
+    "id": 25,
+    "pov_text": "POV: seu feed te mostrou um achadinho de verdade",
+    "caption_text": "🔥 Achadinho selecionado com preço bom. Quer mais ofertas? Link do grupo gratuito na bio. #achadinhos #ofertas",
+    "categoria": "Geral",
+    "tom": "Economia",
+    "ativo": "Sim"
+  },
+  {
+    "id": 26,
+    "pov_text": "POV: você encontrou desconto onde todo mundo paga caro",
+    "caption_text": "💸 Não compra no preço cheio sem conferir as ofertas. Grupo gratuito no link da bio. #descontos #promocoes",
+    "categoria": "Geral",
+    "tom": "Economia",
+    "ativo": "Sim"
+  },
+  {
+    "id": 27,
+    "pov_text": "POV: você descobriu que promoção boa existe sim",
+    "caption_text": "✅ Promoção real, achadinho útil e cupom quando aparece. Receba tudo no grupo gratuito. #promocoes #cupons",
+    "categoria": "Ofertas",
+    "tom": "Economia",
+    "ativo": "Sim"
+  },
+  {
+    "id": 28,
+    "pov_text": "POV: você parou de perder oferta relâmpago",
+    "caption_text": "⚡ Oferta relâmpago acaba rápido. Entre no grupo gratuito e receba antes de acabar. #ofertarelampago #achadinhos",
+    "categoria": "Ofertas",
+    "tom": "Urgência",
+    "ativo": "Sim"
+  },
+  {
+    "id": 29,
+    "pov_text": "POV: você achou um produto barato e útil",
+    "caption_text": "🛒 Produto útil + preço bom = achadinho aprovado. Link do grupo gratuito na bio. #achadinhos #compras",
+    "categoria": "Geral",
+    "tom": "Economia",
+    "ativo": "Sim"
+  },
+  {
+    "id": 30,
+    "pov_text": "POV: você salvou dinheiro com uma mensagem do grupo",
+    "caption_text": "💬 Uma oferta certa pode economizar muito. Entre no grupo gratuito pelo link da bio. #promocoes #ofertas",
+    "categoria": "Geral",
+    "tom": "Economia",
+    "ativo": "Sim"
+  },
+  {
+    "id": 31,
+    "pov_text": "POV: você encontrou seu novo achadinho favorito",
+    "caption_text": "✨ Achadinho bom para salvar e conferir. Quer receber mais? Grupo gratuito na bio. #achadinhos",
+    "categoria": "Geral",
+    "tom": "Economia",
+    "ativo": "Sim"
+  },
+  {
+    "id": 32,
+    "pov_text": "POV: você viu o preço cair e aproveitou",
+    "caption_text": "📉 Preço baixou? A gente avisa. Entre no grupo gratuito e receba ofertas todos os dias. #descontos #ofertas",
+    "categoria": "Geral",
+    "tom": "Economia",
+    "ativo": "Sim"
+  },
+  {
+    "id": 33,
+    "pov_text": "POV: você descobriu como comprar melhor na internet",
+    "caption_text": "🧠 Comprar online com desconto é outro nível. Receba ofertas no grupo gratuito. #comprasonline #promocoes",
+    "categoria": "Geral",
+    "tom": "Economia",
+    "ativo": "Sim"
+  },
+  {
+    "id": 34,
+    "pov_text": "POV: você achou promoção antes dos outros",
+    "caption_text": "👀 Quem entra no grupo recebe primeiro. Link gratuito na bio. #ofertas #achadinhos #descontos",
+    "categoria": "Geral",
+    "tom": "Urgência",
+    "ativo": "Sim"
+  },
+  {
+    "id": 35,
+    "pov_text": "POV: você encontrou aquele achadinho de milhões",
+    "caption_text": "🔥 Achadinho com cara de compra certeira. Entra no grupo gratuito para receber mais. #achadinhos #promocoes",
+    "categoria": "Geral",
+    "tom": "Economia",
+    "ativo": "Sim"
+  },
+  {
+    "id": 36,
+    "pov_text": "POV: você não deixa mais cupom passar",
+    "caption_text": "🎟️ Cupom apareceu, a gente manda. Entre no grupo gratuito pelo link da bio. #cupons #descontos",
+    "categoria": "Cupons",
+    "tom": "Economia",
+    "ativo": "Sim"
+  },
+  {
+    "id": 37,
+    "pov_text": "POV: você comprou melhor porque esperou a oferta",
+    "caption_text": "💸 Às vezes esperar a promoção certa vale muito. Receba alertas no grupo gratuito. #promocoes #ofertas",
+    "categoria": "Ofertas",
+    "tom": "Economia",
+    "ativo": "Sim"
+  },
+  {
+    "id": 38,
+    "pov_text": "POV: você entrou no grupo e virou caçador de desconto",
+    "caption_text": "🔎 Caçador de desconto sabe: oferta boa acaba rápido. Link do grupo gratuito na bio. #descontos #achadinhos",
+    "categoria": "Geral",
+    "tom": "Urgência",
+    "ativo": "Sim"
+  },
+  {
+    "id": 39,
+    "pov_text": "POV: você achou uma oferta boa demais para ignorar",
+    "caption_text": "😱 Preço bom passando aqui. Quer receber mais? Entra no grupo gratuito pelo link da bio. #ofertas #promocao",
+    "categoria": "Ofertas",
+    "tom": "Economia",
+    "ativo": "Sim"
+  },
+  {
+    "id": 40,
+    "pov_text": "POV: você descobriu onde garimpar produtos baratos",
+    "caption_text": "🛒 Achadinhos selecionados todos os dias. Entre no grupo gratuito e economize. #achadinhos #compras",
+    "categoria": "Geral",
+    "tom": "Economia",
+    "ativo": "Sim"
+  },
+  {
+    "id": 41,
+    "pov_text": "POV: você entrou no grupo antes da oferta acabar",
+    "caption_text": "⏳ Oferta boa tem hora para acabar. Receba os alertas no grupo gratuito. #ofertas #descontos",
+    "categoria": "Ofertas",
+    "tom": "Urgência",
+    "ativo": "Sim"
+  },
+  {
+    "id": 42,
+    "pov_text": "POV: você viu esse produto e pensou: preciso",
+    "caption_text": "😄 Produto útil, preço bom e chance de economizar. Link do grupo gratuito na bio. #achadinhos",
+    "categoria": "Geral",
+    "tom": "Economia",
+    "ativo": "Sim"
+  },
+  {
+    "id": 43,
+    "pov_text": "POV: você encontrou uma compra inteligente",
+    "caption_text": "✅ Achadinho escolhido para quem gosta de comprar bem. Entra no grupo gratuito. #comprasinteligentes #promocoes",
+    "categoria": "Geral",
+    "tom": "Economia",
+    "ativo": "Sim"
+  },
+  {
+    "id": 44,
+    "pov_text": "POV: você descobriu o segredo dos achadinhos baratos",
+    "caption_text": "🔐 O segredo é receber as ofertas certas na hora certa. Link do grupo gratuito na bio. #achadinhos #ofertas",
+    "categoria": "Geral",
+    "tom": "Economia",
+    "ativo": "Sim"
+  },
+  {
+    "id": 45,
+    "pov_text": "POV: você viu uma oferta que combina com seu bolso",
+    "caption_text": "💰 Preço bom e produto útil. Quer mais achadinhos? Grupo gratuito na bio. #descontos #promocoes",
+    "categoria": "Ofertas",
+    "tom": "Economia",
+    "ativo": "Sim"
+  },
+  {
+    "id": 46,
+    "pov_text": "POV: você não perde mais promoção de madrugada",
+    "caption_text": "🌙 Oferta pode aparecer a qualquer hora. Entre no grupo gratuito e receba os alertas. #promocoes #ofertas",
+    "categoria": "Geral",
+    "tom": "Economia",
+    "ativo": "Sim"
+  },
+  {
+    "id": 47,
+    "pov_text": "POV: você achou desconto sem procurar",
+    "caption_text": "📲 A gente manda no grupo e você economiza. Link gratuito na bio. #descontos #achadinhos",
+    "categoria": "Geral",
+    "tom": "Economia",
+    "ativo": "Sim"
+  },
+  {
+    "id": 48,
+    "pov_text": "POV: você entrou no grupo que facilita suas compras",
+    "caption_text": "🛒 Promoções selecionadas para facilitar suas compras online. Entre pelo link da bio. #promocoes #compras",
+    "categoria": "Ofertas",
+    "tom": "Economia",
+    "ativo": "Sim"
+  },
+  {
+    "id": 49,
+    "pov_text": "POV: você viu essa oferta e correu para salvar",
+    "caption_text": "🏃‍♂️ Achadinho bom passa rápido. Quer receber antes? Grupo gratuito na bio. #achadinhos #ofertas",
+    "categoria": "Ofertas",
+    "tom": "Urgência",
+    "ativo": "Sim"
+  },
+  {
+    "id": 50,
+    "pov_text": "POV: você encontrou o preço que estava esperando",
+    "caption_text": "📉 Quando o preço melhora, a gente avisa. Entre no grupo gratuito. #descontos #promocoes",
+    "categoria": "Geral",
+    "tom": "Economia",
+    "ativo": "Sim"
+  },
+  {
+    "id": 51,
+    "pov_text": "POV: você achou um achadinho que realmente vale",
+    "caption_text": "✅ Oferta selecionada com foco em economia. Link do grupo gratuito na bio. #achadinhos #ofertas",
+    "categoria": "Geral",
+    "tom": "Economia",
+    "ativo": "Sim"
+  },
+  {
+    "id": 52,
+    "pov_text": "POV: você parou de perder tempo procurando cupom",
+    "caption_text": "🎟️ Receba cupons e promoções direto no grupo gratuito. Link na bio. #cupons #promocoes",
+    "categoria": "Cupons",
+    "tom": "Economia",
+    "ativo": "Sim"
+  },
+  {
+    "id": 53,
+    "pov_text": "POV: você viu um produto simples que resolve muito",
+    "caption_text": "🧩 Produto prático com preço bom. Quer mais achadinhos úteis? Grupo gratuito na bio. #achadinhos #utilidades",
+    "categoria": "Geral",
+    "tom": "Economia",
+    "ativo": "Sim"
+  },
+  {
+    "id": 54,
+    "pov_text": "POV: você descobriu uma oferta para comprar hoje",
+    "caption_text": "🔥 Promoção passando por aqui. Confira e receba outras no grupo gratuito. #ofertas #promocoes",
+    "categoria": "Ofertas",
+    "tom": "Economia",
+    "ativo": "Sim"
+  },
+  {
+    "id": 55,
+    "pov_text": "POV: você começou a economizar sem esforço",
+    "caption_text": "📲 As ofertas chegam até você. Entre no grupo gratuito pelo link da bio. #descontos #achadinhos",
+    "categoria": "Geral",
+    "tom": "Economia",
+    "ativo": "Sim"
+  },
+  {
+    "id": 56,
+    "pov_text": "POV: você achou um desconto que vale compartilhar",
+    "caption_text": "📢 Oferta boa merece ser compartilhada. Entre no grupo gratuito e receba mais. #ofertas #descontos",
+    "categoria": "Geral",
+    "tom": "Economia",
+    "ativo": "Sim"
+  },
+  {
+    "id": 57,
+    "pov_text": "POV: você encontrou um produto barato para testar",
+    "caption_text": "🛍️ Achadinho com preço bom para quem gosta de testar novidades. Link na bio. #achadinhos #compras",
+    "categoria": "Geral",
+    "tom": "Economia",
+    "ativo": "Sim"
+  },
+  {
+    "id": 58,
+    "pov_text": "POV: você nunca mais compra sem olhar o grupo",
+    "caption_text": "👀 Antes de comprar, confere as ofertas. Grupo gratuito no link da bio. #promocoes #descontos",
+    "categoria": "Geral",
+    "tom": "Urgência",
+    "ativo": "Sim"
+  },
+  {
+    "id": 59,
+    "pov_text": "POV: você achou o grupo que faz o garimpo por você",
+    "caption_text": "🔎 A gente garimpa as promoções e você só aproveita. Entre pelo link da bio. #achadinhos #promocoes",
+    "categoria": "Geral",
+    "tom": "Economia",
+    "ativo": "Sim"
+  },
+  {
+    "id": 60,
+    "pov_text": "POV: você encontrou uma oferta com cara de oportunidade",
+    "caption_text": "⚡ Oportunidade boa não dura para sempre. Receba alertas no grupo gratuito. #ofertas #descontos",
+    "categoria": "Ofertas",
+    "tom": "Economia",
+    "ativo": "Sim"
+  }
+]

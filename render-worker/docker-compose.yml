@@ -1,0 +1,10 @@
+services:
+  viralframe-worker:
+    build: .
+    container_name: viralframe-worker
+    restart: always
+    env_file:
+      - .env
+    volumes:
+      - ./temp:/app/temp
+      - ./logs:/app/logs
