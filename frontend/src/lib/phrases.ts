@@ -1,4 +1,4 @@
-import { supabase } from './supabase';
+import { supabase, handleSupabaseError } from './supabase';
 import { getCurrentUser } from './profile';
 import { listVideos } from './videos';
 import type { VideoStatus } from './videos';
@@ -29,8 +29,7 @@ export async function getOrCreateDefaultPhraseBank(userId: string): Promise<stri
     .limit(1);
 
   if (error) {
-    console.error('Erro ao buscar banco de frases:', error);
-    throw new Error('Erro ao identificar seu banco de frases.');
+    return handleSupabaseError(error, 'Erro ao identificar seu banco de frases.');
   }
 
   if (banks && banks.length > 0) {
@@ -48,8 +47,7 @@ export async function getOrCreateDefaultPhraseBank(userId: string): Promise<stri
     .single();
 
   if (createError) {
-    console.error('Erro ao criar banco de frases padrão:', createError);
-    throw new Error('Não foi possível criar um banco de frases.');
+    return handleSupabaseError(createError, 'Não foi possível criar um banco de frases.');
   }
 
   return newBank.id;
@@ -107,7 +105,7 @@ export async function uploadPhrases(file: File): Promise<{ success: boolean; tot
           const captionIndex = headers.indexOf('caption_text');
 
           if (povIndex === -1 || captionIndex === -1) {
-            throw new Error('O arquivo CSV precisa conter as colunas "pov_text" e "caption_text".');
+            throw new Error('O CSV precisa conter pov_text e caption_text.');
           }
 
           const categoriaIndex = headers.indexOf('categoria');
@@ -133,6 +131,10 @@ export async function uploadPhrases(file: File): Promise<{ success: boolean; tot
             const categoria = categoriaIndex !== -1 ? cols[categoriaIndex]?.trim() || 'Geral' : 'Geral';
             const tom = tomIndex !== -1 ? cols[tomIndex]?.trim() || 'Neutro' : 'Neutro';
 
+            // Comportamento do campo ativo:
+            // "Não" ou "nao" = false
+            // "Sim" = true
+            // Vazio, coluna ausente ou qualquer outro valor = true
             let ativo = true;
             if (ativoIndex !== -1) {
               const activeStr = cols[ativoIndex]?.trim().toLowerCase();
@@ -162,8 +164,7 @@ export async function uploadPhrases(file: File): Promise<{ success: boolean; tot
             .insert(phrasesToInsert);
 
           if (insertError) {
-            console.error('Erro ao inserir frases no Supabase:', insertError);
-            throw new Error('Não foi possível salvar as frases no banco de dados.');
+            return handleSupabaseError(insertError, 'Não foi possível salvar as frases no banco de dados.');
           }
 
           const freshInfo = await listPhrases();
@@ -183,6 +184,9 @@ export async function uploadPhrases(file: File): Promise<{ success: boolean; tot
     });
   } catch (err: any) {
     console.error('Erro em uploadPhrases:', err);
+    if (err.message && (err.message.includes('permissão') || err.message.includes('sessão'))) {
+      throw err;
+    }
     throw new Error(err.message || 'Não foi possível carregar o banco de frases.');
   }
 }
@@ -200,8 +204,7 @@ export async function listPhrases(): Promise<PhraseListResponse> {
       .eq('user_id', user.id);
 
     if (error) {
-      console.error('Erro ao listar frases:', error);
-      throw new Error('Não foi possível carregar o banco de frases.');
+      return handleSupabaseError(error, 'Não foi possível carregar o banco de frases.');
     }
 
     const phrases: PhraseItem[] = (dbPhrases || []).map(p => ({
@@ -222,6 +225,9 @@ export async function listPhrases(): Promise<PhraseListResponse> {
     };
   } catch (err: any) {
     console.error('Erro em listPhrases:', err);
+    if (err.message && (err.message.includes('permissão') || err.message.includes('sessão'))) {
+      throw err;
+    }
     throw new Error(err.message || 'Não foi possível carregar o banco de frases.');
   }
 }
@@ -236,12 +242,11 @@ export async function applyRandomPhrases(overwrite: boolean): Promise<VideoStatu
     // 1. Busca vídeos
     const { data: videos, error: videoError } = await supabase
       .from('videos')
-      .select('id, pov_text, caption_text')
+      .select('id, pov_text, caption_text, status')
       .eq('user_id', user.id);
 
     if (videoError) {
-      console.error('Erro ao carregar vídeos para aplicar frases:', videoError);
-      throw new Error('Erro ao buscar seus vídeos.');
+      return handleSupabaseError(videoError, 'Erro ao buscar seus vídeos.');
     }
 
     if (!videos || videos.length === 0) {
@@ -256,8 +261,7 @@ export async function applyRandomPhrases(overwrite: boolean): Promise<VideoStatu
       .eq('ativo', true);
 
     if (phrasesError) {
-      console.error('Erro ao carregar frases ativas:', phrasesError);
-      throw new Error('Erro ao buscar frases no banco de dados.');
+      return handleSupabaseError(phrasesError, 'Erro ao buscar frases no banco de dados.');
     }
 
     if (!activePhrases || activePhrases.length === 0) {
@@ -277,14 +281,21 @@ export async function applyRandomPhrases(overwrite: boolean): Promise<VideoStatu
       const frase = shuffled[phraseIdx % shuffled.length];
       phraseIdx++;
 
+      const updatePayload: any = {
+        pov_text: frase.pov_text,
+        caption_text: frase.caption_text,
+        updated_at: new Date().toISOString()
+      };
+
+      // Só altera o status para 'edited' se o status atual for 'uploaded', 'empty', nulo ou vazio
+      const currentStatus = video.status;
+      if (!currentStatus || currentStatus === 'uploaded' || currentStatus === 'empty') {
+        updatePayload.status = 'edited';
+      }
+
       const { error: updateError } = await supabase
         .from('videos')
-        .update({
-          pov_text: frase.pov_text,
-          caption_text: frase.caption_text,
-          status: 'edited',
-          updated_at: new Date().toISOString()
-        })
+        .update(updatePayload)
         .eq('id', video.id);
 
       if (updateError) {
@@ -296,6 +307,9 @@ export async function applyRandomPhrases(overwrite: boolean): Promise<VideoStatu
     return listVideos();
   } catch (err: any) {
     console.error('Erro em applyRandomPhrases:', err);
+    if (err.message && (err.message.includes('permissão') || err.message.includes('sessão'))) {
+      throw err;
+    }
     throw new Error(err.message || 'Falha ao aplicar frases.');
   }
 }
@@ -307,7 +321,7 @@ export function downloadPhraseTemplate() {
   const headers = 'pov_text,caption_text,categoria,tom,ativo\n';
   const row1 = '"POV: você achou o nicho certo de vídeos","Crie vídeos automatizados usando inteligência artificial e venda no piloto automático. Clique no link da bio!",Geral,Neutro,Sim\n';
   const row2 = '"POV: você cansou de gastar horas editando","O ViralFrame Studio faz tudo por você em menos de 1 minuto.",Geral,Neutro,Sim\n';
-  const row3 = '"POV: como economizar R$ 2000 em edições","Com o ViralFrame, a inteligência artificial gera centenas de vídeos automatizados.",Financeiro,Profissional,Sim\n';
+  const row3 = '"POV: como economizar R$ 2000 em edições","Com o ViralFrame, a inteligência artificial gera centenas de vídeos automatizados.",Financeiro,Profissional,Não\n';
 
   const csvContent = '\uFEFF' + headers + row1 + row2 + row3; // \uFEFF força o Excel a ler como UTF-8
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });

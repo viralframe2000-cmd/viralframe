@@ -77,7 +77,8 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({ onProfileChang
         setSuccessMsg("Foto de perfil atualizada com sucesso!");
         setTimeout(() => setSuccessMsg(null), 5000);
       } catch (err: any) {
-        setError(err.message || "Não foi possível enviar a logo. Tente outro arquivo.");
+        console.error("Erro real no upload de logo:", err);
+        setError(err.message || "Não foi possível enviar a logo. Verifique o arquivo e tente novamente.");
       } finally {
         setUploading(false);
       }
@@ -105,6 +106,7 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({ onProfileChang
       setSuccessMsg("Informações do perfil salvas com sucesso.");
       setTimeout(() => setSuccessMsg(null), 5000);
     } catch (err: any) {
+      console.error("Erro real ao salvar perfil:", err);
       setError(err.message || "Não foi possível salvar o perfil. Verifique sua sessão e tente novamente.");
     } finally {
       setSaving(false);
@@ -125,7 +127,8 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({ onProfileChang
         setSuccessMsg("Informações do perfil limpas.");
         setTimeout(() => setSuccessMsg(null), 5000);
       } catch (err: any) {
-        setError(err.message || "Erro ao limpar perfil.");
+        console.error("Erro real ao limpar perfil:", err);
+        setError(err.message || "Não foi possível limpar o perfil.");
       } finally {
         setSaving(false);
       }

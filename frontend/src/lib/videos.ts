@@ -1,9 +1,9 @@
-import { supabase } from './supabase';
+import { supabase, handleSupabaseError } from './supabase';
 import { getCurrentUser } from './profile';
 import { createSignedUrl } from './storage';
 
 export interface VideoStatus {
-  id?: string;
+  id: string; // Garantindo id não opcional
   filename: string;
   status: string;
   exists_output: boolean;
@@ -28,8 +28,7 @@ export async function getOrCreateDefaultProject(userId: string): Promise<string>
     .limit(1);
 
   if (error) {
-    console.error('Erro ao buscar projetos:', error);
-    throw new Error('Erro ao identificar seu projeto principal.');
+    return handleSupabaseError(error, 'Erro ao identificar seu projeto principal.');
   }
 
   if (projects && projects.length > 0) {
@@ -47,8 +46,7 @@ export async function getOrCreateDefaultProject(userId: string): Promise<string>
     .single();
 
   if (createError) {
-    console.error('Erro ao criar projeto principal:', createError);
-    throw new Error('Não foi possível criar um projeto padrão.');
+    return handleSupabaseError(createError, 'Não foi possível criar um projeto padrão.');
   }
 
   return newProject.id;
@@ -94,7 +92,9 @@ export async function uploadVideos(files: File[]): Promise<{ uploaded: string[];
       }
 
       const videoId = videoRecord.id;
-      const storagePath = `${user.id}/${projectId}/${videoId}/original${ext}`;
+      // Obtém extensão limpa (ex: "mp4" em vez de ".mp4")
+      const cleanExt = file.name.split('.').pop()?.toLowerCase() || 'mp4';
+      const storagePath = `${user.id}/${projectId}/${videoId}/original.${cleanExt}`;
 
       // 2. Upload do arquivo para o bucket user-uploads
       const { error: uploadError } = await supabase.storage
@@ -142,6 +142,9 @@ export async function uploadVideos(files: File[]): Promise<{ uploaded: string[];
     return { uploaded, failed };
   } catch (err: any) {
     console.error('Erro geral no upload de vídeos:', err);
+    if (err.message && (err.message.includes('permissão') || err.message.includes('sessão'))) {
+      throw err;
+    }
     throw new Error('Não foi possível enviar os vídeos. Verifique sua conexão e tente novamente.');
   }
 }
@@ -160,8 +163,7 @@ export async function listVideos(): Promise<VideoStatus[]> {
       .order('created_at', { ascending: false });
 
     if (error) {
-      console.error('Erro ao consultar a tabela videos:', error);
-      throw new Error('Não foi possível carregar a lista de vídeos.');
+      return handleSupabaseError(error, 'Não foi possível carregar a lista de vídeos.');
     }
 
     const videoStatuses: VideoStatus[] = [];
@@ -228,97 +230,129 @@ export async function listVideos(): Promise<VideoStatus[]> {
     return videoStatuses;
   } catch (err: any) {
     console.error('Erro em listVideos:', err);
+    if (err.message && (err.message.includes('permissão') || err.message.includes('sessão'))) {
+      throw err;
+    }
     throw new Error(err.message || 'Não foi possível listar os vídeos.');
   }
 }
 
 /**
- * Salva metadados dos vídeos (pov_text e caption_text) a partir da lista editada na UI.
+ * Salva metadados dos vídeos (pov_text e caption_text).
+ * Só altera o status para 'edited' se o status atual for 'uploaded', 'empty' ou nulo.
  */
 export async function saveMetadata(items: { filename: string; pov_text: string; caption_text: string }[]): Promise<{ success: boolean }> {
   try {
     const user = await getCurrentUser();
+    const filenames = items.map(i => i.filename);
+
+    // 1. Consulta o status atual dos vídeos a serem atualizados
+    const { data: dbVideos, error: selectError } = await supabase
+      .from('videos')
+      .select('id, original_filename, status')
+      .eq('user_id', user.id)
+      .in('original_filename', filenames);
+
+    if (selectError) {
+      return handleSupabaseError(selectError, 'Não foi possível consultar os vídeos.');
+    }
 
     for (const item of items) {
+      const matchedVideo = dbVideos?.find(v => v.original_filename === item.filename);
+      const currentStatus = matchedVideo?.status;
+
+      const updatePayload: any = {
+        pov_text: item.pov_text,
+        caption_text: item.caption_text,
+        updated_at: new Date().toISOString()
+      };
+
+      // Só muda para edited se o status atual for 'uploaded', 'empty', vazio ou nulo
+      if (!currentStatus || currentStatus === 'uploaded' || currentStatus === 'empty') {
+        updatePayload.status = 'edited';
+      }
+
       const { error } = await supabase
         .from('videos')
-        .update({
-          pov_text: item.pov_text,
-          caption_text: item.caption_text,
-          status: 'edited',
-          updated_at: new Date().toISOString()
-        })
+        .update(updatePayload)
         .eq('user_id', user.id)
         .eq('original_filename', item.filename);
 
       if (error) {
-        console.error(`Erro ao salvar metadados do vídeo ${item.filename}:`, error);
-        throw new Error(`Não foi possível salvar os dados do vídeo ${item.filename}.`);
+        return handleSupabaseError(error, `Não foi possível salvar os dados do vídeo ${item.filename}.`);
       }
     }
 
     return { success: true };
   } catch (err: any) {
     console.error('Erro em saveMetadata:', err);
+    if (err.message && (err.message.includes('permissão') || err.message.includes('sessão'))) {
+      throw err;
+    }
     throw new Error(err.message || 'Erro ao salvar metadados.');
   }
 }
 
 /**
  * Exclui fisicamente o vídeo e suas dependências nos buckets do Supabase Storage e na tabela videos.
+ * Identifica o vídeo por ID para garantir segurança.
  */
-export async function deleteVideo(filename: string): Promise<{ success: boolean }> {
+export async function deleteVideo(videoId: string): Promise<{ success: boolean }> {
   try {
     const user = await getCurrentUser();
 
-    // 1. Busca os dados do vídeo para obter os caminhos de storage
-    const { data: videos, error: selectError } = await supabase
+    // 1. Busca os dados do vídeo pelo ID
+    const { data: video, error: selectError } = await supabase
       .from('videos')
       .select('*')
       .eq('user_id', user.id)
-      .eq('original_filename', filename);
+      .eq('id', videoId)
+      .maybeSingle();
 
     if (selectError) {
-      console.error(`Erro ao consultar vídeo ${filename} para remoção:`, selectError);
-      throw new Error(`Falha ao excluir o vídeo.`);
+      return handleSupabaseError(selectError, 'Falha ao buscar vídeo para exclusão.');
     }
 
-    for (const video of videos) {
-      // 2. Remove os arquivos físicos dos buckets
-      if (video.input_storage_path) {
-        const { error: err1 } = await supabase.storage
-          .from('user-uploads')
-          .remove([video.input_storage_path]);
-        if (err1) console.error(`Erro ao remover vídeo original ${video.input_storage_path}:`, err1);
-      }
+    if (!video) {
+      throw new Error('Vídeo não encontrado.');
+    }
 
-      const renderedFiles: string[] = [];
-      if (video.output_storage_path) renderedFiles.push(video.output_storage_path);
-      if (video.cover_storage_path) renderedFiles.push(video.cover_storage_path);
-      if (video.caption_storage_path) renderedFiles.push(video.caption_storage_path);
+    // 2. Remove os arquivos físicos dos buckets
+    if (video.input_storage_path) {
+      const { error: err1 } = await supabase.storage
+        .from('user-uploads')
+        .remove([video.input_storage_path]);
+      if (err1) console.error(`Erro ao remover vídeo original ${video.input_storage_path}:`, err1);
+    }
 
-      if (renderedFiles.length > 0) {
-        const { error: err2 } = await supabase.storage
-          .from('rendered-videos')
-          .remove(renderedFiles);
-        if (err2) console.error(`Erro ao remover arquivos renderizados:`, err2);
-      }
+    const renderedFiles: string[] = [];
+    if (video.output_storage_path) renderedFiles.push(video.output_storage_path);
+    if (video.cover_storage_path) renderedFiles.push(video.cover_storage_path);
+    if (video.caption_storage_path) renderedFiles.push(video.caption_storage_path);
 
-      // 3. Remove o registro da tabela videos
-      const { error: deleteError } = await supabase
-        .from('videos')
-        .delete()
-        .eq('id', video.id);
+    if (renderedFiles.length > 0) {
+      const { error: err2 } = await supabase.storage
+        .from('rendered-videos')
+        .remove(renderedFiles);
+      if (err2) console.error(`Erro ao remover arquivos renderizados:`, err2);
+    }
 
-      if (deleteError) {
-        console.error(`Erro ao apagar registro do banco para vídeo ${video.id}:`, deleteError);
-        throw new Error('Falha ao remover o registro do banco.');
-      }
+    // 3. Remove o registro da tabela videos por ID
+    const { error: deleteError } = await supabase
+      .from('videos')
+      .delete()
+      .eq('id', video.id);
+
+    if (deleteError) {
+      return handleSupabaseError(deleteError, 'Falha ao remover o registro do banco.');
     }
 
     return { success: true };
   } catch (err: any) {
     console.error('Erro em deleteVideo:', err);
+    if (err.message && (err.message.includes('permissão') || err.message.includes('sessão'))) {
+      throw err;
+    }
     throw new Error(err.message || 'Erro ao apagar arquivo.');
   }
 }

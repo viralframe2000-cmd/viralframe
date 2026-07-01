@@ -1,17 +1,15 @@
 import React from 'react';
 import type { VideoStatus } from '../lib/api';
-// URLs assinadas e manipuladas dinamicamente via Supabase
-
 
 interface VideoTableProps {
   videos: VideoStatus[];
   metadata: { [filename: string]: { pov_text: string; caption_text: string } };
   onMetadataChange: (filename: string, field: 'pov_text' | 'caption_text', value: string) => void;
-  onRender: (filename: string) => void;
-  onDelete: (filename: string) => void;
+  onRender: (id: string) => void;
+  onDelete: (id: string) => void;
   processingVideos: string[];
-  selectedFilename: string | null;
-  onSelectVideo: (filename: string) => void;
+  selectedVideoId: string | null;
+  onSelectVideo: (id: string) => void;
 }
 
 export const VideoTable: React.FC<VideoTableProps> = ({
@@ -21,7 +19,7 @@ export const VideoTable: React.FC<VideoTableProps> = ({
   onRender,
   onDelete,
   processingVideos,
-  selectedFilename,
+  selectedVideoId,
   onSelectVideo
 }) => {
   if (videos.length === 0) {
@@ -85,13 +83,13 @@ export const VideoTable: React.FC<VideoTableProps> = ({
           <tbody>
             {videos.map((video) => {
               const fileMeta = metadata[video.filename] || { pov_text: '', caption_text: '' };
-              const isProcessing = processingVideos.includes(video.filename);
-              const isSelected = selectedFilename === video.filename;
+              const isProcessing = video.id ? processingVideos.includes(video.id) : false;
+              const isSelected = video.id ? selectedVideoId === video.id : false;
               
               return (
                 <tr 
-                  key={video.filename} 
-                  onClick={() => onSelectVideo(video.filename)}
+                  key={video.id || video.filename} 
+                  onClick={() => video.id && onSelectVideo(video.id)}
                   style={{ 
                     borderBottom: '1px solid var(--border-color)',
                     backgroundColor: isSelected ? 'rgba(255, 255, 255, 0.05)' : 'transparent',
@@ -176,6 +174,36 @@ export const VideoTable: React.FC<VideoTableProps> = ({
                       }}>
                         ⚡ Editando...
                       </span>
+                    ) : video.status === 'queued' ? (
+                      <span style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        color: '#f59e0b',
+                        backgroundColor: 'rgba(245, 158, 11, 0.15)',
+                        border: '1px solid rgba(245, 158, 11, 0.25)',
+                        padding: '4px 10px',
+                        borderRadius: '12px',
+                        fontWeight: 600,
+                        fontSize: '11px'
+                      }}>
+                        ⏳ Na fila
+                      </span>
+                    ) : video.status === 'processing' ? (
+                      <span style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        color: '#3b82f6',
+                        backgroundColor: 'rgba(59, 130, 246, 0.15)',
+                        border: '1px solid rgba(59, 130, 246, 0.25)',
+                        padding: '4px 10px',
+                        borderRadius: '12px',
+                        fontWeight: 600,
+                        fontSize: '11px'
+                      }}>
+                        ⚙️ Processando
+                      </span>
                     ) : video.exists_output ? (
                       <span style={{
                         color: '#4ade80',
@@ -187,6 +215,18 @@ export const VideoTable: React.FC<VideoTableProps> = ({
                         fontSize: '11px'
                       }}>
                         Pronto
+                      </span>
+                    ) : video.status === 'failed' ? (
+                      <span style={{
+                        color: '#ef4444',
+                        backgroundColor: 'rgba(239, 68, 68, 0.15)',
+                        border: '1px solid rgba(239, 68, 68, 0.25)',
+                        padding: '4px 10px',
+                        borderRadius: '12px',
+                        fontWeight: 600,
+                        fontSize: '11px'
+                      }}>
+                        Falhou
                       </span>
                     ) : (
                       <span style={{
@@ -209,7 +249,7 @@ export const VideoTable: React.FC<VideoTableProps> = ({
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          onSelectVideo(video.filename);
+                          if (video.id) onSelectVideo(video.id);
                         }}
                         style={{
                           backgroundColor: isSelected ? 'rgba(59, 130, 246, 0.15)' : 'rgba(255, 255, 255, 0.04)',
@@ -239,8 +279,8 @@ export const VideoTable: React.FC<VideoTableProps> = ({
                       </button>
 
                       <button
-                        onClick={() => onRender(video.filename)}
-                        disabled={isProcessing}
+                        onClick={() => video.id && onRender(video.id)}
+                        disabled={isProcessing || video.status === 'queued' || video.status === 'processing'}
                         style={{
                           background: 'var(--gradient-cyan-blue)',
                           color: 'white',
@@ -251,10 +291,10 @@ export const VideoTable: React.FC<VideoTableProps> = ({
                           cursor: 'pointer',
                           fontSize: '11px',
                           transition: 'all 0.2s',
-                          opacity: isProcessing ? 0.5 : 1
+                          opacity: (isProcessing || video.status === 'queued' || video.status === 'processing') ? 0.5 : 1
                         }}
                         onMouseEnter={e => {
-                          if (!isProcessing) e.currentTarget.style.opacity = '0.9';
+                          if (!isProcessing && video.status !== 'queued' && video.status !== 'processing') e.currentTarget.style.opacity = '0.9';
                         }}
                         onMouseLeave={e => {
                           e.currentTarget.style.opacity = '1';
@@ -323,7 +363,7 @@ export const VideoTable: React.FC<VideoTableProps> = ({
                       )}
                       
                       <button
-                        onClick={() => onDelete(video.filename)}
+                        onClick={() => video.id && onDelete(video.id)}
                         style={{
                           backgroundColor: 'transparent',
                           color: 'var(--color-error)',

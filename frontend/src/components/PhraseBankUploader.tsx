@@ -48,7 +48,8 @@ export const PhraseBankUploader: React.FC<PhraseBankUploaderProps> = ({ onApplyS
           setError("Falha ao processar arquivo de frases.");
         }
       } catch (err: any) {
-        setError(err.message || "Erro ao enviar arquivo.");
+        console.error("Erro real no upload de frases CSV:", err);
+        setError(err.message || "Não foi possível carregar o banco de frases.");
       } finally {
         setUploading(false);
         e.target.value = '';
@@ -66,6 +67,7 @@ export const PhraseBankUploader: React.FC<PhraseBankUploaderProps> = ({ onApplyS
       setSuccessMsg("Frases aleatórias aplicadas com sucesso!");
       setTimeout(() => setSuccessMsg(null), 5000);
     } catch (err: any) {
+      console.error("Erro real ao aplicar frases aleatórias:", err);
       setError(err.message || "Falha ao aplicar frases.");
     } finally {
       setApplying(false);

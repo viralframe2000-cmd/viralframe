@@ -9,23 +9,23 @@ import { PhraseBankUploader } from '../components/PhraseBankUploader';
 import { PrivacyCard } from '../components/PrivacyCard';
 import { listVideos, saveMetadata, renderVideo, renderAll, getJob, deleteVideo, healthCheck, applyRandomPhrases, downloadAllFiles } from '../lib/api';
 import type { VideoStatus, JobStatus } from '../lib/api';
+import { isSupabaseConfigured } from '../lib/supabase';
+
 export const Dashboard: React.FC = () => {
   const [videos, setVideos] = useState<VideoStatus[]>([]);
   const [metadata, setMetadata] = useState<{ [filename: string]: { pov_text: string; caption_text: string } }>({});
   const [activeJob, setActiveJob] = useState<JobStatus | null>(null);
   const [processingVideos, setProcessingVideos] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
-  const [focusedVideo, setFocusedVideo] = useState<string | null>(null);
   const [ffmpegInstalled, setFfmpegInstalled] = useState<boolean>(true);
 
-  const [selectedVideoFilename, setSelectedVideoFilename] = useState<string | null>(null);
+  const [selectedVideoId, setSelectedVideoId] = useState<string | null>(null);
   const [profile, setProfile] = useState<{ display_name: string; handle: string; verified: boolean; logo_path?: string }>({
     display_name: '',
     handle: '',
     verified: true,
     logo_path: undefined
   });
-  const [showDownloadDropdown, setShowDownloadDropdown] = useState<boolean>(false);
   const [downloadStatus, setDownloadStatus] = useState<string | null>(null);
   const [previewMode, setPreviewMode] = useState<"input" | "output">("input");
 
@@ -33,9 +33,7 @@ export const Dashboard: React.FC = () => {
     setProfile(prev => ({ ...prev, ...newProfile }));
   };
 
-  const handleDownloadAll = (type: 'videos' | 'videos-captions' | 'all') => {
-    setShowDownloadDropdown(false);
-    
+  const handleDownloadAll = () => {
     const readyVideos = videos.filter(v => v.exists_output);
     if (readyVideos.length === 0) {
       alert("Nenhum vídeo pronto para baixar. Gere os vídeos primeiro.");
@@ -43,10 +41,9 @@ export const Dashboard: React.FC = () => {
     }
 
     setDownloadStatus("Preparando download...");
-    
     try {
-      downloadAllFiles(type);
-      setDownloadStatus("Download iniciado.");
+      downloadAllFiles('all');
+      setDownloadStatus("Aguardando exportação...");
       setTimeout(() => {
         setDownloadStatus(null);
       }, 4000);
@@ -76,8 +73,8 @@ export const Dashboard: React.FC = () => {
       });
       setMetadata(prev => ({ ...prev, ...newMeta }));
       
-      if (videoList.length > 0 && !focusedVideo) {
-        setFocusedVideo(videoList[0].filename);
+      if (videoList.length > 0 && !selectedVideoId) {
+        setSelectedVideoId(videoList[0].id);
       }
     } catch (err) {
       console.error("Erro ao carregar dados:", err);
@@ -128,7 +125,6 @@ export const Dashboard: React.FC = () => {
         [field]: value
       }
     }));
-    setFocusedVideo(filename);
   };
 
   const handleSaveMetadata = async () => {
@@ -146,7 +142,7 @@ export const Dashboard: React.FC = () => {
     }
   };
 
-  const handleRenderSingle = async (filename: string) => {
+  const handleRenderSingle = async (videoId: string) => {
     if (!profile.display_name.trim() || !profile.handle.trim()) {
       alert("Preencha as informações do perfil antes de gerar os vídeos.");
       return;
@@ -154,14 +150,14 @@ export const Dashboard: React.FC = () => {
 
     await handleSaveMetadata();
     
-    setProcessingVideos(prev => [...prev, filename]);
+    setProcessingVideos(prev => [...prev, videoId]);
     try {
-      await renderVideo(filename);
+      await renderVideo(videoId);
       loadData();
-    } catch (err) {
-      alert(`Falha ao gerar vídeo ${filename}`);
+    } catch (err: any) {
+      alert(err.message || `Falha ao gerar vídeo.`);
     } finally {
-      setProcessingVideos(prev => prev.filter(f => f !== filename));
+      setProcessingVideos(prev => prev.filter(id => id !== videoId));
     }
   };
 
@@ -183,26 +179,33 @@ export const Dashboard: React.FC = () => {
         status: 'pending',
         message: 'Fila criada...'
       });
-    } catch (err) {
-      alert('Falha ao iniciar processamento em lote.');
+    } catch (err: any) {
+      alert(err.message || 'Falha ao iniciar processamento em lote.');
     }
   };
 
-  const handleDelete = async (filename: string) => {
-    if (confirm(`Tem certeza que deseja apagar ${filename}?`)) {
+  const handleDelete = async (videoId: string) => {
+    const targetVideo = videos.find(v => v.id === videoId);
+    if (!targetVideo) return;
+
+    if (confirm(`Tem certeza que deseja apagar ${targetVideo.filename}?`)) {
       try {
-        await deleteVideo(filename);
+        await deleteVideo(videoId);
+        // Reseta foco caso o vídeo deletado estivesse selecionado
+        if (selectedVideoId === videoId) {
+          setSelectedVideoId(null);
+        }
         loadData();
-      } catch (err) {
-        alert('Erro ao apagar arquivo.');
+      } catch (err: any) {
+        alert(err.message || 'Erro ao apagar arquivo.');
       }
     }
   };
 
-  const selectedVideo = videos.find(v => v.filename === selectedVideoFilename);
-  const currentPov = selectedVideoFilename && metadata[selectedVideoFilename]
-    ? metadata[selectedVideoFilename].pov_text
-    : (selectedVideo?.pov_text || '');
+  const selectedVideo = videos.find(v => v.id === selectedVideoId);
+  const currentPov = selectedVideo
+    ? metadata[selectedVideo.filename]?.pov_text || selectedVideo.pov_text || ''
+    : '';
 
   const topButtonStyle: React.CSSProperties = {
     background: 'rgba(255, 255, 255, 0.04)',
@@ -234,6 +237,29 @@ export const Dashboard: React.FC = () => {
     <Layout>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '30px' }}>
         
+        {/* Supabase connection missing warning banner */}
+        {!isSupabaseConfigured && (
+          <div style={{
+            backgroundColor: 'var(--color-error-bg)',
+            border: '1px solid var(--color-error-border)',
+            color: 'var(--color-error)',
+            padding: '16px 20px',
+            borderRadius: 'var(--radius-lg)',
+            fontSize: '13px',
+            fontWeight: 500,
+            lineHeight: '1.5',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            boxShadow: 'var(--shadow-sm)'
+          }}>
+            <span style={{ fontSize: '18px' }}>⚠️</span>
+            <div>
+              <strong>Supabase não configurado!</strong> O ViralFrame Studio necessita das variáveis de ambiente <code>VITE_SUPABASE_URL</code> e <code>VITE_SUPABASE_ANON_KEY</code> configuradas no painel da Vercel para poder persistir e processar os dados em produção.
+            </div>
+          </div>
+        )}
+
         {/* FFmpeg banner error */}
         {!ffmpegInstalled && (
           <div style={{
@@ -273,7 +299,7 @@ export const Dashboard: React.FC = () => {
             brandHandle={profile.handle}
             logoUrl={profile.logo_path || ''}
             isVerified={profile.verified}
-            selectedVideoFilename={selectedVideoFilename}
+            selectedVideoFilename={selectedVideo?.filename || null}
             inputPreviewUrl={selectedVideo?.input_preview_url || null}
             outputPreviewUrl={selectedVideo?.output_preview_url || null}
             hasOutput={selectedVideo?.has_output || false}
@@ -318,96 +344,16 @@ export const Dashboard: React.FC = () => {
             
             <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
               
-              {/* Dropdown Baixar Tudo */}
-              <div style={{ position: 'relative' }}>
-                <button
-                  onClick={() => setShowDownloadDropdown(!showDownloadDropdown)}
-                  disabled={videos.length === 0}
-                  style={topButtonStyle}
-                  onMouseEnter={handleButtonMouseEnter}
-                  onMouseLeave={handleButtonMouseLeave}
-                >
-                  📦 Baixar Tudo ▾
-                </button>
-                
-                {showDownloadDropdown && (
-                  <div style={{
-                    position: 'absolute',
-                    top: '100%',
-                    right: 0,
-                    marginTop: '6px',
-                    backgroundColor: 'rgba(8, 13, 26, 0.95)',
-                    backdropFilter: 'blur(20px)',
-                    WebkitBackdropFilter: 'blur(20px)',
-                    border: '1px solid var(--border-color)',
-                    borderRadius: 'var(--radius-md)',
-                    boxShadow: 'var(--shadow-lg)',
-                    zIndex: 100,
-                    minWidth: '240px',
-                    overflow: 'hidden',
-                    display: 'flex',
-                    flexDirection: 'column'
-                  }}>
-                    <button
-                      onClick={() => handleDownloadAll('videos')}
-                      style={{
-                        padding: '10px 16px',
-                        border: 'none',
-                        backgroundColor: 'transparent',
-                        textAlign: 'left',
-                        fontSize: '13px',
-                        cursor: 'pointer',
-                        fontWeight: 500,
-                        color: 'var(--text-primary)',
-                        transition: 'background-color 0.2s',
-                        fontFamily: 'var(--font-secondary)'
-                      }}
-                      onMouseEnter={(e) => (e.target as HTMLElement).style.backgroundColor = 'rgba(255,255,255,0.06)'}
-                      onMouseLeave={(e) => (e.target as HTMLElement).style.backgroundColor = 'transparent'}
-                    >
-                      🎥 Só vídeos
-                    </button>
-                    <button
-                      onClick={() => handleDownloadAll('videos-captions')}
-                      style={{
-                        padding: '10px 16px',
-                        border: 'none',
-                        backgroundColor: 'transparent',
-                        textAlign: 'left',
-                        fontSize: '13px',
-                        cursor: 'pointer',
-                        fontWeight: 500,
-                        color: 'var(--text-primary)',
-                        transition: 'background-color 0.2s',
-                        fontFamily: 'var(--font-secondary)'
-                      }}
-                      onMouseEnter={(e) => (e.target as HTMLElement).style.backgroundColor = 'rgba(255,255,255,0.06)'}
-                      onMouseLeave={(e) => (e.target as HTMLElement).style.backgroundColor = 'transparent'}
-                    >
-                      📝 Vídeos + legendas
-                    </button>
-                    <button
-                      onClick={() => handleDownloadAll('all')}
-                      style={{
-                        padding: '10px 16px',
-                        border: 'none',
-                        backgroundColor: 'transparent',
-                        textAlign: 'left',
-                        fontSize: '13px',
-                        cursor: 'pointer',
-                        fontWeight: 500,
-                        color: 'var(--text-primary)',
-                        transition: 'background-color 0.2s',
-                        fontFamily: 'var(--font-secondary)'
-                      }}
-                      onMouseEnter={(e) => (e.target as HTMLElement).style.backgroundColor = 'rgba(255,255,255,0.06)'}
-                      onMouseLeave={(e) => (e.target as HTMLElement).style.backgroundColor = 'transparent'}
-                    >
-                      📁 Tudo: vídeos + legendas + capas
-                    </button>
-                  </div>
-                )}
-              </div>
+              {/* Baixar Tudo ZIP */}
+              <button
+                onClick={handleDownloadAll}
+                disabled={videos.length === 0}
+                style={topButtonStyle}
+                onMouseEnter={handleButtonMouseEnter}
+                onMouseLeave={handleButtonMouseLeave}
+              >
+                📦 Baixar Tudo ZIP
+              </button>
 
               {/* Botão aplicar aleatórias */}
               <button
@@ -501,9 +447,9 @@ export const Dashboard: React.FC = () => {
               onRender={handleRenderSingle}
               onDelete={handleDelete}
               processingVideos={processingVideos}
-              selectedFilename={selectedVideoFilename}
-              onSelectVideo={(filename) => {
-                setSelectedVideoFilename(filename);
+              selectedVideoId={selectedVideoId}
+              onSelectVideo={(id) => {
+                setSelectedVideoId(id);
                 setPreviewMode("input");
               }}
             />

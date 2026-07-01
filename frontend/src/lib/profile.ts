@@ -1,4 +1,4 @@
-import { supabase } from './supabase';
+import { supabase, handleSupabaseError } from './supabase';
 import { createSignedUrl } from './storage';
 
 export interface ProfileSettingsData {
@@ -6,14 +6,17 @@ export interface ProfileSettingsData {
   handle: string;
   verified: boolean;
   logo_path?: string;
+  avatar_path?: string | null;
+  instagram_handle?: string;
 }
 
 /**
- * Obtém o usuário atualmente autenticado ou lança um erro amigável caso não esteja logado.
+ * Obtém o usuário atualmente autenticado ou redireciona para login.
  */
 export async function getCurrentUser() {
   const { data: { user }, error } = await supabase.auth.getUser();
   if (error || !user) {
+    window.location.href = '/login';
     throw new Error('Sua sessão expirou. Faça login novamente.');
   }
   return user;
@@ -33,8 +36,7 @@ export async function getProfile(): Promise<ProfileSettingsData> {
       .maybeSingle();
 
     if (error) {
-      console.error('Erro ao consultar a tabela profiles:', error);
-      throw new Error('Não foi possível carregar o perfil.');
+      return handleSupabaseError(error, 'Não foi possível carregar o perfil.');
     }
 
     if (!profile) {
@@ -42,7 +44,9 @@ export async function getProfile(): Promise<ProfileSettingsData> {
         display_name: '',
         handle: '',
         verified: true,
-        logo_path: undefined
+        logo_path: undefined,
+        avatar_path: null,
+        instagram_handle: ''
       };
     }
 
@@ -59,10 +63,15 @@ export async function getProfile(): Promise<ProfileSettingsData> {
       display_name: profile.display_name || '',
       handle: profile.instagram_handle || '',
       verified: true,
-      logo_path: logoUrl
+      logo_path: logoUrl,
+      avatar_path: profile.avatar_path,
+      instagram_handle: profile.instagram_handle
     };
   } catch (err: any) {
     console.error('Erro em getProfile:', err);
+    if (err.message && (err.message.includes('permissão') || err.message.includes('sessão'))) {
+      throw err;
+    }
     throw new Error(err.message || 'Não foi possível carregar o perfil.');
   }
 }
@@ -90,13 +99,15 @@ export async function saveProfile(data: { display_name: string; handle: string; 
       });
 
     if (error) {
-      console.error('Erro no upsert da tabela profiles:', error);
-      throw new Error('Não foi possível salvar o perfil. Verifique sua sessão e tente novamente.');
+      return handleSupabaseError(error, 'Não foi possível salvar o perfil. Verifique sua sessão e tente novamente.');
     }
 
     return getProfile();
   } catch (err: any) {
     console.error('Erro em saveProfile:', err);
+    if (err.message && (err.message.includes('permissão') || err.message.includes('sessão'))) {
+      throw err;
+    }
     throw new Error(err.message || 'Não foi possível salvar o perfil.');
   }
 }
@@ -120,8 +131,7 @@ export async function uploadProfileLogo(file: File): Promise<string> {
       throw new Error('O arquivo excede o limite de tamanho de 5MB.');
     }
 
-    const fileExt = file.name.split('.').pop() || 'png';
-    const storagePath = `${user.id}/logo.${fileExt}`;
+    const storagePath = `${user.id}/logo.png`;
 
     // Upload com upsert: true para sobrescrever se já existir
     const { error: uploadError } = await supabase.storage
@@ -132,8 +142,7 @@ export async function uploadProfileLogo(file: File): Promise<string> {
       });
 
     if (uploadError) {
-      console.error('Erro no upload para bucket user-logos:', uploadError);
-      throw new Error('Não foi possível enviar a logo. Tente outro arquivo.');
+      return handleSupabaseError(uploadError, 'Não foi possível enviar a logo. Tente outro arquivo.');
     }
 
     // Atualiza o registro em profiles com o path da logo
@@ -146,14 +155,16 @@ export async function uploadProfileLogo(file: File): Promise<string> {
       .eq('id', user.id);
 
     if (updateError) {
-      console.error('Erro ao atualizar avatar_path em profiles:', updateError);
-      throw new Error('Não foi possível salvar o vínculo da logo ao seu perfil.');
+      return handleSupabaseError(updateError, 'Não foi possível salvar o vínculo da logo ao seu perfil.');
     }
 
     // Gera e retorna signed URL para preview imediato
     return createSignedUrl('user-logos', storagePath);
   } catch (err: any) {
     console.error('Erro em uploadProfileLogo:', err);
+    if (err.message && (err.message.includes('permissão') || err.message.includes('sessão'))) {
+      throw err;
+    }
     throw new Error(err.message || 'Não foi possível enviar a logo.');
   }
 }
@@ -165,26 +176,14 @@ export async function clearProfile(): Promise<ProfileSettingsData> {
   try {
     const user = await getCurrentUser();
 
-    // Busca avatar_path atual para saber qual arquivo deletar do storage
-    const { data: profile, error: fetchError } = await supabase
-      .from('profiles')
-      .select('avatar_path')
-      .eq('id', user.id)
-      .maybeSingle();
+    // Remove do storage o arquivo padrão logo.png
+    const storagePath = `${user.id}/logo.png`;
+    const { error: removeError } = await supabase.storage
+      .from('user-logos')
+      .remove([storagePath]);
 
-    if (fetchError) {
-      console.error('Erro ao carregar perfil para limpeza:', fetchError);
-    }
-
-    if (profile?.avatar_path) {
-      // Remove do storage
-      const { error: removeError } = await supabase.storage
-        .from('user-logos')
-        .remove([profile.avatar_path]);
-
-      if (removeError) {
-        console.error('Erro ao apagar arquivo de logo do storage:', removeError);
-      }
+    if (removeError) {
+      console.error('Erro ao apagar arquivo de logo do storage:', removeError);
     }
 
     // Limpa a tabela profiles
@@ -199,18 +198,22 @@ export async function clearProfile(): Promise<ProfileSettingsData> {
       .eq('id', user.id);
 
     if (updateError) {
-      console.error('Erro ao atualizar limpeza de perfil:', updateError);
-      throw new Error('Não foi possível limpar o perfil.');
+      return handleSupabaseError(updateError, 'Não foi possível limpar o perfil.');
     }
 
     return {
       display_name: '',
       handle: '',
       verified: true,
-      logo_path: undefined
+      logo_path: undefined,
+      avatar_path: null,
+      instagram_handle: ''
     };
   } catch (err: any) {
     console.error('Erro em clearProfile:', err);
+    if (err.message && (err.message.includes('permissão') || err.message.includes('sessão'))) {
+      throw err;
+    }
     throw new Error(err.message || 'Não foi possível limpar o perfil.');
   }
 }

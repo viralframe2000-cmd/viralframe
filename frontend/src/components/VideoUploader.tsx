@@ -121,7 +121,7 @@ export const VideoUploader: React.FC<VideoUploaderProps> = ({ onUploadSuccess })
         ref={fileInputRef}
         type="file"
         multiple
-        accept="video/mp4,video/quicktime,video/x-matroska,video/webm,.mp4,.mov,.mkv,.webm"
+        accept=".mp4,.mov,.mkv,.webm,video/mp4,video/quicktime,video/x-matroska,video/webm"
         style={{ display: 'none' }}
         onChange={handleChange}
       />

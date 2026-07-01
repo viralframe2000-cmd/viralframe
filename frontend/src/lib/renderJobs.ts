@@ -1,4 +1,4 @@
-import { supabase } from './supabase';
+import { supabase, handleSupabaseError } from './supabase';
 import { getCurrentUser } from './profile';
 import { getOrCreateDefaultProject } from './videos';
 
@@ -13,9 +13,9 @@ export interface JobStatus {
 
 /**
  * Cria um job de renderização para vídeos específicos ou para todos os vídeos qualificados.
- * @param videoFilenames Opcional - Lista de nomes dos arquivos originais para renderização individual ou parcial.
+ * @param videoIds Opcional - Lista de IDs dos vídeos para renderização individual ou parcial.
  */
-export async function createRenderJob(videoFilenames?: string[]): Promise<{ job_id: string }> {
+export async function createRenderJob(videoIds?: string[]): Promise<{ job_id: string }> {
   try {
     const user = await getCurrentUser();
     const projectId = await getOrCreateDefaultProject(user.id);
@@ -23,28 +23,32 @@ export async function createRenderJob(videoFilenames?: string[]): Promise<{ job_
     // 1. Busca os vídeos a serem processados
     let query = supabase
       .from('videos')
-      .select('id, original_filename')
+      .select('id, original_filename, status, input_storage_path')
       .eq('user_id', user.id);
 
-    if (videoFilenames && videoFilenames.length > 0) {
-      query = query.in('original_filename', videoFilenames);
+    if (videoIds && videoIds.length > 0) {
+      // Geração explícita por ID: permite reprocessamento mesmo que já pronto/falhado
+      query = query.in('id', videoIds);
     } else {
-      // Vídeos qualificados para lote (todos que não estão processando nem enfileirados)
-      query = query.in('status', ['uploaded', 'failed', 'edited']);
+      // Geração em lote:
+      // Só enfileira vídeos com input_storage_path preenchido, status diferente de 'processing' e diferente de 'pronto'
+      query = query
+        .not('input_storage_path', 'is', null)
+        .not('status', 'eq', 'processing')
+        .not('status', 'eq', 'pronto');
     }
 
     const { data: videos, error: fetchError } = await query;
 
     if (fetchError) {
-      console.error('Erro ao buscar vídeos para render job:', fetchError);
-      throw new Error('Falha ao identificar vídeos para renderização.');
+      return handleSupabaseError(fetchError, 'Falha ao identificar vídeos para renderização.');
     }
 
     if (!videos || videos.length === 0) {
       throw new Error('Nenhum vídeo qualificado encontrado para renderização.');
     }
 
-    const videoIds = videos.map(v => v.id);
+    const targetVideoIds = videos.map(v => v.id);
 
     // 2. Insere um novo job com status queued
     const { data: job, error: insertError } = await supabase
@@ -53,7 +57,7 @@ export async function createRenderJob(videoFilenames?: string[]): Promise<{ job_
         user_id: user.id,
         project_id: projectId,
         status: 'queued',
-        total: videoIds.length,
+        total: targetVideoIds.length,
         processed: 0,
         failed: 0,
         created_at: new Date().toISOString()
@@ -62,8 +66,7 @@ export async function createRenderJob(videoFilenames?: string[]): Promise<{ job_
       .single();
 
     if (insertError) {
-      console.error('Erro ao criar render job:', insertError);
-      throw new Error('Não foi possível iniciar o processamento.');
+      return handleSupabaseError(insertError, 'Não foi possível iniciar o processamento.');
     }
 
     // 3. Atualiza os vídeos correspondentes para o status queued
@@ -71,18 +74,21 @@ export async function createRenderJob(videoFilenames?: string[]): Promise<{ job_
       .from('videos')
       .update({
         status: 'queued',
+        render_job_id: job.id,
         updated_at: new Date().toISOString()
       })
-      .in('id', videoIds);
+      .in('id', targetVideoIds);
 
     if (updateError) {
-      console.error('Erro ao atualizar status dos vídeos para renderização:', updateError);
-      throw new Error('Não foi possível enfileirar os vídeos para processamento.');
+      return handleSupabaseError(updateError, 'Não foi possível enfileirar os vídeos para processamento.');
     }
 
     return { job_id: job.id };
   } catch (err: any) {
     console.error('Erro em createRenderJob:', err);
+    if (err.message && (err.message.includes('permissão') || err.message.includes('sessão'))) {
+      throw err;
+    }
     throw new Error(err.message || 'Falha ao iniciar processamento.');
   }
 }
@@ -99,8 +105,7 @@ export async function getJob(jobId: string): Promise<JobStatus> {
       .single();
 
     if (error || !job) {
-      console.error(`Erro ao obter job ${jobId}:`, error);
-      throw new Error('Falha ao carregar status do job.');
+      return handleSupabaseError(error || new Error('Job não encontrado'), 'Falha ao carregar status do job.');
     }
 
     let message = 'Aguardando início do processamento...';
@@ -126,6 +131,9 @@ export async function getJob(jobId: string): Promise<JobStatus> {
     };
   } catch (err: any) {
     console.error('Erro em getJob:', err);
+    if (err.message && (err.message.includes('permissão') || err.message.includes('sessão'))) {
+      throw err;
+    }
     throw new Error(err.message || 'Falha ao obter status do processamento.');
   }
 }

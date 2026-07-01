@@ -33,11 +33,11 @@ export async function healthCheck() {
 export const uploadVideos = uploadVideosDirect;
 export const listVideos = listVideosDirect;
 export const saveMetadata = saveMetadataDirect;
-export const deleteVideo = deleteVideoDirect;
+export const deleteVideo = deleteVideoDirect; // Agora aceita videoId: string
 
 // Vinculações de render jobs
-export async function renderVideo(filename: string) {
-  return createRenderJob([filename]);
+export async function renderVideo(videoId: string) {
+  return createRenderJob([videoId]);
 }
 
 export async function renderAll() {
@@ -75,5 +75,5 @@ export function profileLogoUrl(_timestamp?: number, _token?: string) {
  * Lida com downloads em lote ZIP de forma limpa no frontend.
  */
 export async function downloadAllFiles(_type: 'videos' | 'videos-captions' | 'all') {
-  alert('A exportação consolidada em lote ZIP está desabilitada temporariamente. Por favor, realize o download dos arquivos (Vídeo, Capa e Legenda) individualmente na fila de edição.');
+  alert('Exportação ZIP será ativada pelo worker em breve.');
 }
