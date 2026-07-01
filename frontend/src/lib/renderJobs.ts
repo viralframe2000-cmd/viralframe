@@ -31,11 +31,12 @@ export async function createRenderJob(videoIds?: string[]): Promise<{ job_id: st
       query = query.in('id', videoIds);
     } else {
       // Geração em lote:
-      // Só enfileira vídeos com input_storage_path preenchido, status diferente de 'processing' e diferente de 'pronto'
+      // Só enfileira vídeos com input_storage_path preenchido, status diferente de 'processing', 'pronto' e 'rendered'
       query = query
         .not('input_storage_path', 'is', null)
         .not('status', 'eq', 'processing')
-        .not('status', 'eq', 'pronto');
+        .not('status', 'eq', 'pronto')
+        .not('status', 'eq', 'rendered');
     }
 
     const { data: videos, error: fetchError } = await query;

@@ -210,146 +210,171 @@ export const PreviewCard: React.FC<PreviewCardProps> = ({
           top: 0,
           left: '50%',
           transform: 'translateX(-50%)',
-          zIndex: 10
+          zIndex: 15
         }}></div>
 
-        {/* 1. Cabeçalho */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px',
-          padding: '40px 20px 10px 20px',
-          backgroundColor: '#ffffff'
-        }}>
-          {/* Logo */}
-          <div style={{
-            width: '24px',
-            height: '24px',
-            borderRadius: '50%',
-            backgroundColor: '#f1f5f9',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: '#64748b',
-            overflow: 'hidden',
-            border: '1px solid #e2e8f0',
-            flexShrink: 0
-          }}>
-            {logoSignedUrl && logoSignedUrl.trim() !== "" ? (
-              <img 
-                src={logoSignedUrl} 
-                alt="Logo" 
-                style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
-                onError={(e) => {
-                  (e.target as HTMLElement).style.display = 'none';
-                  const parent = (e.target as HTMLElement).parentElement;
-                  if (parent) {
-                    parent.innerHTML = `<span style="font-size: 12px; color: #64748b;">👤</span>`;
-                  }
-                }}
-              />
-            ) : (
-              <span style={{ fontSize: '12px', color: '#64748b' }}>👤</span>
-            )}
-          </div>
-          <div>
-            <div style={{ 
-              fontSize: '10px', 
-              fontWeight: 'bold', 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: '3px',
-              wordBreak: 'break-word',
-              maxWidth: '190px',
-              lineHeight: 1.2,
-              color: '#0f172a'
+        {previewMode === "output" && hasOutput && outputPreviewUrl ? (
+          /* Modo Renderizado (Tela cheia interna do celular) */
+          <video
+            key={outputPreviewUrl}
+            src={outputPreviewUrl}
+            autoPlay
+            muted
+            loop
+            playsInline
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+              zIndex: 1
+            }}
+          />
+        ) : (
+          /* Modo Original / Edição (HTML Overlay + Vídeo Original) */
+          <>
+            {/* 1. Cabeçalho */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '40px 20px 10px 20px',
+              backgroundColor: '#ffffff',
+              zIndex: 2
             }}>
-              {nameToDisplay}
-              {isVerified && (
-                <span style={{
-                  width: '8px',
-                  height: '8px',
-                  backgroundColor: '#1d9bf0',
-                  borderRadius: '50%',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: 'white',
-                  fontSize: '5px',
-                  flexShrink: 0
+              {/* Logo */}
+              <div style={{
+                width: '24px',
+                height: '24px',
+                borderRadius: '50%',
+                backgroundColor: '#f1f5f9',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#64748b',
+                overflow: 'hidden',
+                border: '1px solid #e2e8f0',
+                flexShrink: 0
+              }}>
+                {logoSignedUrl && logoSignedUrl.trim() !== "" ? (
+                  <img 
+                    src={logoSignedUrl} 
+                    alt="Logo" 
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                    onError={(e) => {
+                      (e.target as HTMLElement).style.display = 'none';
+                      const parent = (e.target as HTMLElement).parentElement;
+                      if (parent) {
+                        parent.innerHTML = `<span style="font-size: 12px; color: #64748b;">👤</span>`;
+                      }
+                    }}
+                  />
+                ) : (
+                  <span style={{ fontSize: '12px', color: '#64748b' }}>👤</span>
+                )}
+              </div>
+              <div>
+                <div style={{ 
+                  fontSize: '10px', 
+                  fontWeight: 'bold', 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '3px',
+                  wordBreak: 'break-word',
+                  maxWidth: '190px',
+                  lineHeight: 1.2,
+                  color: '#0f172a'
                 }}>
-                  ✓
-                </span>
-              )}
+                  {nameToDisplay}
+                  {isVerified && (
+                    <span style={{
+                      width: '8px',
+                      height: '8px',
+                      backgroundColor: '#1d9bf0',
+                      borderRadius: '50%',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: 'white',
+                      fontSize: '5px',
+                      flexShrink: 0
+                    }}>
+                      ✓
+                    </span>
+                  )}
+                </div>
+                <div style={{ fontSize: '8px', color: '#64748b' }}>{handleToDisplay}</div>
+              </div>
             </div>
-            <div style={{ fontSize: '8px', color: '#64748b' }}>{handleToDisplay}</div>
-          </div>
-        </div>
 
-        {/* 2. Frase POV */}
-        <div style={{
-          padding: '0 20px',
-          textAlign: 'center',
-          margin: '10px 0',
-          minHeight: '44px'
-        }}>
-          <p style={{
-            margin: 0,
-            fontSize: '13px',
-            fontWeight: 'bold',
-            color: '#000000',
-            lineHeight: 1.3,
-            wordBreak: 'break-word'
-          }}>
-            {povText || "POV: você entrou no grupo de promoções certo"}
-          </p>
-        </div>
+            {/* 2. Frase POV */}
+            <div style={{
+              padding: '0 20px',
+              textAlign: 'center',
+              margin: '10px 0',
+              minHeight: '44px',
+              zIndex: 2
+            }}>
+              <p style={{
+                margin: 0,
+                fontSize: '13px',
+                fontWeight: 'bold',
+                color: '#000000',
+                lineHeight: 1.3,
+                wordBreak: 'break-word'
+              }}>
+                {povText || "POV: você entrou no grupo de promoções certo"}
+              </p>
+            </div>
 
-        {/* 3. Vídeo do Produto */}
-        <div style={{
-          flex: 1,
-          margin: '0 10px 30px 10px',
-          backgroundColor: '#000000',
-          borderRadius: '12px',
-          border: '1px solid #e2e8f0',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: '#94a3b8',
-          fontSize: '11px',
-          position: 'relative',
-          overflow: 'hidden'
-        }}>
-          {(() => {
-            const videoSrc = previewMode === "output" && hasOutput ? outputPreviewUrl : inputPreviewUrl;
-            if (videoSrc) {
-              return (
+            {/* 3. Vídeo do Produto (Original com crop simétrico no HTML) */}
+            <div style={{
+              flex: 1,
+              margin: '0 10px 30px 10px',
+              backgroundColor: '#000000',
+              borderRadius: '12px',
+              border: '1px solid #e2e8f0',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#94a3b8',
+              fontSize: '11px',
+              position: 'relative',
+              overflow: 'hidden',
+              zIndex: 2
+            }}>
+              {inputPreviewUrl ? (
                 <video
-                  key={videoSrc}
-                  src={videoSrc}
-                  controls
+                  key={inputPreviewUrl}
+                  src={inputPreviewUrl}
+                  autoPlay
                   muted
+                  loop
                   playsInline
-                  preload="metadata"
                   style={{
                     width: '100%',
                     height: '100%',
-                    objectFit: 'contain',
+                    objectFit: 'cover',
+                    objectPosition: 'center',
                     borderRadius: '11px'
                   }}
                 />
-              );
-            }
-            return <span style={{ zIndex: 1, fontWeight: 500 }}>Carregando vídeo...</span>;
-          })()}
-        </div>
+              ) : (
+                <span style={{ zIndex: 1, fontWeight: 500 }}>Carregando vídeo...</span>
+              )}
+            </div>
 
-        {/* Rodapé Limpo */}
-        <div style={{
-          height: '24px',
-          backgroundColor: '#ffffff',
-          width: '100%'
-        }}></div>
+            {/* Rodapé Limpo */}
+            <div style={{
+              height: '24px',
+              backgroundColor: '#ffffff',
+              width: '100%',
+              zIndex: 2
+            }}></div>
+          </>
+        )}
       </div>
     </div>
   );

@@ -37,20 +37,22 @@ def process_job(job):
     user_id = job["user_id"]
     project_id = job.get("project_id")
     
-    logger.info(f"Processando Job {job_id} do usuário {user_id}...")
+    logger.info(f"🔍 Job encontrado: {job_id} do usuário {user_id}. Iniciando processamento...")
     
-    # Atualiza status do job para processing
+    # Atualiza status do job para processing com timestamp ISO 8601
     try:
         supabase_client.table("render_jobs").update({
             "status": "processing",
-            "started_at": "now()"
+            "started_at": utils.get_iso_now()
         }).eq("id", job_id).execute()
+        logger.info(f"🚀 Job {job_id} marcado como 'processing' no banco.")
     except Exception as e:
         logger.error(f"Erro ao atualizar status do job {job_id} para processing: {e}")
     
-    # Busca vídeos do projeto/usuário que estão com status 'queued' ou 'uploaded'
+    # Busca vídeos associados a este job de renderização específico usando render_job_id
     try:
-        query = supabase_client.table("videos").select("*").eq("user_id", user_id).in_("status", ["queued", "uploaded"])
+        logger.info(f"Buscando vídeos associados ao Job {job_id}...")
+        query = supabase_client.table("videos").select("*").eq("render_job_id", job_id)
         if project_id:
             query = query.eq("project_id", project_id)
             
@@ -70,12 +72,13 @@ def process_job(job):
         logger.error(f"Erro ao atualizar total de vídeos do job {job_id}: {e}")
     
     if total == 0:
-        logger.info(f"Nenhum vídeo na fila para o Job {job_id}.")
+        logger.info(f"Nenhum vídeo associado encontrado para o Job {job_id}.")
         try:
             supabase_client.table("render_jobs").update({
                 "status": "completed",
-                "finished_at": "now()"
+                "finished_at": utils.get_iso_now()
             }).eq("id", job_id).execute()
+            logger.info(f"Job {job_id} finalizado sem vídeos.")
         except Exception as e:
             logger.error(f"Erro ao marcar job sem vídeos como concluído: {e}")
         return
@@ -96,10 +99,12 @@ def process_job(job):
     logo_path = None
     if profile.get("avatar_path"):
         logo_path = utils.get_temp_path(f"logo_{user_id}.png")
+        logger.info(f"Baixando logo de perfil {profile['avatar_path']}...")
         try:
             res_logo = supabase_client.storage.from_("user-logos").download(profile["avatar_path"])
             with open(logo_path, "wb") as f:
                 f.write(res_logo)
+            logger.info("Logo de perfil baixada com sucesso.")
         except Exception as e:
             logger.error(f"Erro ao baixar logo {profile['avatar_path']} do Storage: {e}")
             logo_path = None
@@ -109,6 +114,7 @@ def process_job(job):
         # Atualiza status do vídeo para processing
         try:
             supabase_client.table("videos").update({"status": "processing"}).eq("id", video_id).execute()
+            logger.info(f"Vídeo {video_id} alterado para status 'processing'.")
         except Exception as e:
             logger.error(f"Erro ao atualizar status do vídeo {video_id} para processing: {e}")
         
@@ -121,13 +127,14 @@ def process_job(job):
         try:
             # 1. Baixa o vídeo original do Supabase Storage (bucket user-uploads)
             input_path = video["input_storage_path"]
-            logger.info(f"Baixando vídeo original {input_path}...")
+            logger.info(f"📥 Baixando vídeo original do storage: {input_path}")
             res_video = supabase_client.storage.from_("user-uploads").download(input_path)
             with open(local_input, "wb") as f:
                 f.write(res_video)
+            logger.info(f"Download do input de {video_id} concluído.")
                 
             # 2. Renderiza com FFmpeg
-            logger.info(f"Renderizando vídeo {video_id} com FFmpeg...")
+            logger.info(f"🎬 Iniciando execução do FFmpeg para {video_id}...")
             renderer.process_video(
                 input_video_path=local_input,
                 output_video_path=local_output,
@@ -138,6 +145,7 @@ def process_job(job):
                 handle=handle,
                 is_verified=is_verified
             )
+            logger.info(f"Execução do FFmpeg finalizada com sucesso para {video_id}.")
             
             # 3. Cria arquivo de legenda temporário
             with open(local_caption, "w", encoding="utf-8") as f:
@@ -149,7 +157,7 @@ def process_job(job):
             out_cover_path = f"{user_proj_path}/cover.jpg"
             out_caption_path = f"{user_proj_path}/caption.txt"
             
-            logger.info(f"Enviando arquivos renderizados de {video_id} ao Supabase Storage...")
+            logger.info(f"📤 Enviando arquivos renderizados de {video_id} ao Supabase Storage...")
             # Faz upload/update dos arquivos gerados no Storage
             for remote_p, local_p, content_type in [
                 (out_video_path, local_output, "video/mp4"),
@@ -160,10 +168,11 @@ def process_job(job):
                     supabase_client.storage.from_("rendered-videos").upload(remote_p, local_p, {"content-type": content_type})
                 except Exception:
                     supabase_client.storage.from_("rendered-videos").update(remote_p, local_p, {"content-type": content_type})
+            logger.info(f"Upload dos arquivos físicos de {video_id} finalizado.")
                 
-            # 5. Atualiza registro do vídeo para pronto
+            # 5. Atualiza registro do vídeo para rendered (padronizado)
             supabase_client.table("videos").update({
-                "status": "pronto",
+                "status": "rendered",
                 "output_storage_path": out_video_path,
                 "cover_storage_path": out_cover_path,
                 "caption_storage_path": out_caption_path,
@@ -171,7 +180,7 @@ def process_job(job):
             }).eq("id", video_id).execute()
             
             processed += 1
-            logger.info(f"Vídeo {video_id} renderizado e enviado com sucesso.")
+            logger.info(f"✅ Vídeo {video_id} processado com sucesso. Status alterado para 'rendered'.")
             
         except Exception as e:
             error_msg = str(e)
@@ -181,6 +190,7 @@ def process_job(job):
                     "status": "failed",
                     "error_message": error_msg
                 }).eq("id", video_id).execute()
+                logger.info(f"Status do vídeo {video_id} alterado para 'failed'.")
             except Exception as se:
                 logger.error(f"Erro ao atualizar status de falha no vídeo {video_id}: {se}")
             failed += 1
@@ -210,15 +220,16 @@ def process_job(job):
     try:
         supabase_client.table("render_jobs").update({
             "status": final_status,
-            "finished_at": "now()",
+            "finished_at": utils.get_iso_now(),
             "error_message": f"{failed} de {total} vídeos falharam no processamento." if failed > 0 else None
         }).eq("id", job_id).execute()
+        logger.info(f"🏁 Job {job_id} marcado como '{final_status}' no banco.")
     except Exception as e:
         logger.error(f"Erro ao atualizar finalização do job {job_id}: {e}")
     
     # Remove a logo temporária
     utils.clean_temp_file(logo_path)
-    logger.info(f"Job {job_id} concluído com status {final_status} (Processados: {processed}, Falhas: {failed})")
+    logger.info(f"🏁 Processamento do Job {job_id} finalizado. (Sucessos: {processed}, Falhas: {failed})")
 
 def start_worker():
     logger.info("ViralFrame Studio Render Worker - Inicializando...")

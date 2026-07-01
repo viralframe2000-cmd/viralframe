@@ -205,7 +205,7 @@ def process_video(input_video_path, output_video_path, output_cover_path, pov_te
         limit_duration = target_duration
 
     video_filter = (
-        f"[0:v]scale=1020:1300:force_original_aspect_ratio=increase,crop=1020:1300,"
+        f"[0:v]scale=1020:1300:force_original_aspect_ratio=increase,crop=1020:1300:(in_w-out_w)/2:(in_h-out_h)/2,"
         f"eq=brightness=0.02:contrast=1.04,unsharp=3:3:0.4:3:3:0.0[prod_video];"
         f"color=c=white:s=1080x1920:d={limit_duration}[bg];"
         f"[bg][prod_video]overlay=30:500[tmp_composition];"

@@ -83,11 +83,11 @@ export const VideoTable: React.FC<VideoTableProps> = ({
       border = 'rgba(245, 158, 11, 0.3)';
       text = 'Na fila';
       icon = '⏳';
-    } else if (video.exists_output) {
+    } else if (video.status === 'rendered' || video.status === 'completed' || video.exists_output) {
       color = '#10b981';
       bg = 'rgba(16, 185, 129, 0.15)';
       border = 'rgba(16, 185, 129, 0.3)';
-      text = 'Renderizado';
+      text = 'Pronto';
       icon = '✅';
     } else if (video.status === 'failed') {
       color = '#ef4444';

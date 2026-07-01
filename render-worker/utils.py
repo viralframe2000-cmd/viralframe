@@ -1,6 +1,7 @@
 import os
 import subprocess
 import shutil
+from datetime import datetime, timezone
 
 # Diretório temporário mapeado
 TEMP_DIR = os.getenv("TEMP_DIR", "/app/temp")
@@ -44,3 +45,7 @@ def validate_ffmpeg() -> bool:
         return result.returncode == 0
     except Exception:
         return False
+
+def get_iso_now() -> str:
+    """Retorna a data e hora atuais no formato ISO 8601 UTC (compatível com timestamp com timezone do Supabase)."""
+    return datetime.now(timezone.utc).isoformat()
