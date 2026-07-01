@@ -7,10 +7,8 @@ import { JobProgress } from '../components/JobProgress';
 import { PreviewCard } from '../components/PreviewCard';
 import { PhraseBankUploader } from '../components/PhraseBankUploader';
 import { PrivacyCard } from '../components/PrivacyCard';
-import { listVideos, saveMetadata, renderVideo, renderAll, getJob, deleteVideo, healthCheck, applyRandomPhrases, profileLogoUrl, downloadAllFiles, API_BASE_URL } from '../lib/api';
+import { listVideos, saveMetadata, renderVideo, renderAll, getJob, deleteVideo, healthCheck, applyRandomPhrases, downloadAllFiles } from '../lib/api';
 import type { VideoStatus, JobStatus } from '../lib/api';
-import { supabase } from '../lib/supabase';
-
 export const Dashboard: React.FC = () => {
   const [videos, setVideos] = useState<VideoStatus[]>([]);
   const [metadata, setMetadata] = useState<{ [filename: string]: { pov_text: string; caption_text: string } }>({});
@@ -19,7 +17,7 @@ export const Dashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [focusedVideo, setFocusedVideo] = useState<string | null>(null);
   const [ffmpegInstalled, setFfmpegInstalled] = useState<boolean>(true);
-  const [authToken, setAuthToken] = useState<string>('');
+
   const [selectedVideoFilename, setSelectedVideoFilename] = useState<string | null>(null);
   const [profile, setProfile] = useState<{ display_name: string; handle: string; verified: boolean; logo_path?: string }>({
     display_name: '',
@@ -27,14 +25,12 @@ export const Dashboard: React.FC = () => {
     verified: true,
     logo_path: undefined
   });
-  const [logoTimestamp, setLogoTimestamp] = useState<number>(Date.now());
   const [showDownloadDropdown, setShowDownloadDropdown] = useState<boolean>(false);
   const [downloadStatus, setDownloadStatus] = useState<string | null>(null);
   const [previewMode, setPreviewMode] = useState<"input" | "output">("input");
 
-  const handleProfileChange = (newProfile: { display_name: string; handle: string; verified: boolean }, timestamp: number) => {
-    setProfile(newProfile);
-    setLogoTimestamp(timestamp);
+  const handleProfileChange = (newProfile: { display_name: string; handle: string; verified: boolean; logo_path?: string }) => {
+    setProfile(prev => ({ ...prev, ...newProfile }));
   };
 
   const handleDownloadAll = (type: 'videos' | 'videos-captions' | 'all') => {
@@ -64,11 +60,6 @@ export const Dashboard: React.FC = () => {
 
   const loadData = async () => {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        setAuthToken(session.access_token);
-      }
-
       const health = await healthCheck();
       setFfmpegInstalled(health.ffmpeg_installed);
 
@@ -280,11 +271,11 @@ export const Dashboard: React.FC = () => {
             povText={currentPov || ''} 
             brandName={profile.display_name}
             brandHandle={profile.handle}
-            logoUrl={profileLogoUrl(logoTimestamp, authToken)}
+            logoUrl={profile.logo_path || ''}
             isVerified={profile.verified}
             selectedVideoFilename={selectedVideoFilename}
-            inputPreviewUrl={selectedVideo?.input_preview_url ? `${API_BASE_URL}${selectedVideo.input_preview_url}?token=${authToken}` : null}
-            outputPreviewUrl={selectedVideo?.output_preview_url ? `${API_BASE_URL}${selectedVideo.output_preview_url}?token=${authToken}` : null}
+            inputPreviewUrl={selectedVideo?.input_preview_url || null}
+            outputPreviewUrl={selectedVideo?.output_preview_url || null}
             hasOutput={selectedVideo?.has_output || false}
             previewMode={previewMode}
             onPreviewModeChange={(mode) => setPreviewMode(mode)}
@@ -515,7 +506,6 @@ export const Dashboard: React.FC = () => {
                 setSelectedVideoFilename(filename);
                 setPreviewMode("input");
               }}
-              authToken={authToken}
             />
           )}
         </div>

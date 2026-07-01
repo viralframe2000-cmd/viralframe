@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { uploadPhrases, listPhrases, applyRandomPhrases, downloadPhraseTemplateUrl } from '../lib/api';
+import { uploadPhrases, listPhrases, applyRandomPhrases } from '../lib/api';
+import { downloadPhraseTemplate } from '../lib/phrases';
 import type { VideoStatus } from '../lib/api';
 
 interface PhraseBankUploaderProps {
@@ -111,9 +112,8 @@ export const PhraseBankUploader: React.FC<PhraseBankUploaderProps> = ({ onApplyS
       </div>
 
       <div style={{ display: 'flex', gap: '10px' }}>
-        <a 
-          href={downloadPhraseTemplateUrl()}
-          download="modelo_frases.csv"
+        <button
+          onClick={() => downloadPhraseTemplate()}
           style={{
             flex: 1,
             background: 'rgba(255,255,255,0.05)',
@@ -124,7 +124,6 @@ export const PhraseBankUploader: React.FC<PhraseBankUploaderProps> = ({ onApplyS
             fontWeight: 600,
             cursor: 'pointer',
             textAlign: 'center',
-            textDecoration: 'none',
             color: 'var(--text-primary)',
             display: 'inline-flex',
             alignItems: 'center',
@@ -143,7 +142,7 @@ export const PhraseBankUploader: React.FC<PhraseBankUploaderProps> = ({ onApplyS
           }}
         >
           📥 Baixar Modelo
-        </a>
+        </button>
 
         <label style={{
           flex: 1,

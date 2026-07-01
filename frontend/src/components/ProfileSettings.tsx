@@ -1,16 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { getProfile, saveProfile, uploadLogo, profileLogoUrl } from '../lib/api';
+import { getProfile, saveProfile, uploadLogo, clearProfile } from '../lib/api';
 import type { ProfileSettingsData } from '../lib/api';
 
 interface ProfileSettingsProps {
-  onProfileChange: (profile: ProfileSettingsData, logoTimestamp: number) => void;
+  onProfileChange: (profile: ProfileSettingsData) => void;
 }
 
 export const ProfileSettings: React.FC<ProfileSettingsProps> = ({ onProfileChange }) => {
   const [displayName, setDisplayName] = useState("");
   const [handle, setHandle] = useState("");
   const [verified, setVerified] = useState(true);
-  const [logoTimestamp, setLogoTimestamp] = useState<number>(Date.now());
+  const [logoUrl, setLogoUrl] = useState<string>("");
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -22,7 +22,8 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({ onProfileChang
       setDisplayName(data.display_name);
       setHandle(data.handle);
       setVerified(data.verified);
-      onProfileChange(data, logoTimestamp);
+      setLogoUrl(data.logo_path || "");
+      onProfileChange(data);
     } catch (err) {
       console.error("Erro ao carregar perfil:", err);
     }
@@ -48,7 +49,8 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({ onProfileChang
       display_name: updatedDisplayName,
       handle: updatedHandle,
       verified,
-    }, logoTimestamp);
+      logo_path: logoUrl
+    });
   };
 
   const handleLogoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -59,20 +61,23 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({ onProfileChang
       setSuccessMsg(null);
 
       try {
-        await uploadLogo(file);
-        const newTimestamp = Date.now();
-        setLogoTimestamp(newTimestamp);
-        
+        const response = await uploadLogo(file);
+
+        if (response.logo_url) {
+          setLogoUrl(response.logo_url);
+        }
+
         onProfileChange({
           display_name: displayName,
           handle,
           verified,
-        }, newTimestamp);
-        
+          logo_path: response.logo_url
+        });
+
         setSuccessMsg("Foto de perfil atualizada com sucesso!");
         setTimeout(() => setSuccessMsg(null), 5000);
       } catch (err: any) {
-        setError("Erro ao enviar a logo.");
+        setError(err.message || "Não foi possível enviar a logo. Tente outro arquivo.");
       } finally {
         setUploading(false);
       }
@@ -93,11 +98,14 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({ onProfileChang
       setDisplayName(saved.display_name);
       setHandle(saved.handle);
       setVerified(saved.verified);
-      onProfileChange(saved, logoTimestamp);
+      if (saved.logo_path) {
+        setLogoUrl(saved.logo_path);
+      }
+      onProfileChange(saved);
       setSuccessMsg("Informações do perfil salvas com sucesso.");
       setTimeout(() => setSuccessMsg(null), 5000);
     } catch (err: any) {
-      setError(err.message || "Erro ao salvar perfil.");
+      setError(err.message || "Não foi possível salvar o perfil. Verifique sua sessão e tente novamente.");
     } finally {
       setSaving(false);
     }
@@ -109,19 +117,15 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({ onProfileChang
       setError(null);
       setSuccessMsg(null);
       try {
-        const saved = await saveProfile({
-          display_name: "",
-          handle: "",
-          verified,
-          logo_path: undefined
-        });
+        const saved = await clearProfile();
         setDisplayName("");
         setHandle("");
-        onProfileChange(saved, Date.now());
+        setLogoUrl("");
+        onProfileChange(saved);
         setSuccessMsg("Informações do perfil limpas.");
         setTimeout(() => setSuccessMsg(null), 5000);
       } catch (err: any) {
-        setError("Erro ao limpar perfil.");
+        setError(err.message || "Erro ao limpar perfil.");
       } finally {
         setSaving(false);
       }
@@ -163,10 +167,10 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({ onProfileChang
           overflow: 'hidden',
           flexShrink: 0
         }}>
-          <img 
-            src={profileLogoUrl(logoTimestamp)} 
-            alt="Logo" 
-            style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+          <img
+            src={logoUrl || undefined}
+            alt="Logo"
+            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
             onError={(e) => {
               (e.target as HTMLElement).style.display = 'none';
               const parent = (e.target as HTMLElement).parentElement;
@@ -176,7 +180,7 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({ onProfileChang
             }}
           />
         </div>
-        
+
         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
           <label style={{
             background: 'rgba(255, 255, 255, 0.05)',
@@ -202,10 +206,10 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({ onProfileChang
             }}
           >
             {uploading ? 'Enviando...' : '📷 Escolher Logo'}
-            <input type="file" accept=".png,.jpg,.jpeg" style={{ display: 'none' }} onChange={handleLogoChange} disabled={uploading} />
+            <input type="file" accept=".png,.jpg,.jpeg,.webp" style={{ display: 'none' }} onChange={handleLogoChange} disabled={uploading} />
           </label>
           <div style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
-            PNG ou JPG circular.
+            PNG, JPG ou WEBP. Máx 5MB.
           </div>
         </div>
       </div>
@@ -213,8 +217,8 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({ onProfileChang
       <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
           <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)' }}>Nome exibido</label>
-          <input 
-            type="text" 
+          <input
+            type="text"
             value={displayName}
             onChange={(e) => handleFieldChange('display_name', e.target.value)}
             placeholder="Coloque seu nome de exibição aqui"
@@ -246,8 +250,8 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({ onProfileChang
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
           <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)' }}>@ do perfil</label>
-          <input 
-            type="text" 
+          <input
+            type="text"
             value={handle}
             onChange={(e) => handleFieldChange('handle', e.target.value)}
             placeholder="Coloque seu @ do Instagram aqui"
@@ -308,7 +312,7 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({ onProfileChang
           >
             {saving ? 'Salvando...' : '💾 Salvar Perfil'}
           </button>
-          
+
           <button
             onClick={handleClearProfile}
             disabled={saving || (!displayName && !handle)}

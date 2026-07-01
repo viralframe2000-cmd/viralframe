@@ -1,6 +1,7 @@
 import React from 'react';
 import type { VideoStatus } from '../lib/api';
-import { downloadVideoUrl, downloadCaptionUrl } from '../lib/api';
+// URLs assinadas e manipuladas dinamicamente via Supabase
+
 
 interface VideoTableProps {
   videos: VideoStatus[];
@@ -11,7 +12,6 @@ interface VideoTableProps {
   processingVideos: string[];
   selectedFilename: string | null;
   onSelectVideo: (filename: string) => void;
-  authToken: string;
 }
 
 export const VideoTable: React.FC<VideoTableProps> = ({
@@ -22,8 +22,7 @@ export const VideoTable: React.FC<VideoTableProps> = ({
   onDelete,
   processingVideos,
   selectedFilename,
-  onSelectVideo,
-  authToken
+  onSelectVideo
 }) => {
   if (videos.length === 0) {
     return (
@@ -267,7 +266,7 @@ export const VideoTable: React.FC<VideoTableProps> = ({
                       {video.exists_output && (
                         <>
                           <a
-                            href={downloadVideoUrl(video.filename, authToken)}
+                            href={video.video_url || '#'}
                             download
                             title="Baixar Vídeo"
                             style={{
@@ -294,7 +293,7 @@ export const VideoTable: React.FC<VideoTableProps> = ({
                             🎥 Vídeo
                           </a>
                           <a
-                            href={downloadCaptionUrl(video.filename, authToken)}
+                            href={video.caption_url || '#'}
                             download
                             title="Baixar Legenda"
                             style={{
