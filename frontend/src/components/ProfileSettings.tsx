@@ -170,18 +170,22 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({ onProfileChang
           overflow: 'hidden',
           flexShrink: 0
         }}>
-          <img
-            src={logoUrl || undefined}
-            alt="Logo"
-            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-            onError={(e) => {
-              (e.target as HTMLElement).style.display = 'none';
-              const parent = (e.target as HTMLElement).parentElement;
-              if (parent) {
-                parent.innerText = displayName ? displayName[0].toUpperCase() : '👤';
-              }
-            }}
-          />
+          {logoUrl && logoUrl.trim() !== "" ? (
+            <img
+              src={logoUrl}
+              alt="Logo"
+              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              onError={(e) => {
+                (e.target as HTMLElement).style.display = 'none';
+                const parent = (e.target as HTMLElement).parentElement;
+                if (parent) {
+                  parent.innerHTML = `<span style="font-size: 24px; color: var(--text-secondary);">👤</span>`;
+                }
+              }}
+            />
+          ) : (
+            <span style={{ fontSize: '24px', color: 'var(--text-secondary)' }}>👤</span>
+          )}
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>

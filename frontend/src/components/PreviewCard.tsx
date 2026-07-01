@@ -226,16 +226,16 @@ export const PreviewCard: React.FC<PreviewCardProps> = ({
             width: '24px',
             height: '24px',
             borderRadius: '50%',
-            backgroundColor: '#1e293b',
+            backgroundColor: '#f1f5f9',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            color: 'white',
-            fontSize: '10px',
-            fontWeight: 'bold',
-            overflow: 'hidden'
+            color: '#64748b',
+            overflow: 'hidden',
+            border: '1px solid #e2e8f0',
+            flexShrink: 0
           }}>
-            {logoSignedUrl ? (
+            {logoSignedUrl && logoSignedUrl.trim() !== "" ? (
               <img 
                 src={logoSignedUrl} 
                 alt="Logo" 
@@ -244,12 +244,12 @@ export const PreviewCard: React.FC<PreviewCardProps> = ({
                   (e.target as HTMLElement).style.display = 'none';
                   const parent = (e.target as HTMLElement).parentElement;
                   if (parent) {
-                    parent.innerText = display_name && display_name.trim() ? display_name.trim()[0].toUpperCase() : '👤';
+                    parent.innerHTML = `<span style="font-size: 12px; color: #64748b;">👤</span>`;
                   }
                 }}
               />
             ) : (
-              display_name && display_name.trim() ? display_name.trim()[0].toUpperCase() : '👤'
+              <span style={{ fontSize: '12px', color: '#64748b' }}>👤</span>
             )}
           </div>
           <div>
