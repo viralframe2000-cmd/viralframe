@@ -1,34 +1,98 @@
 import React from 'react';
 
+export interface VideoStatus {
+  id: string;
+  filename: string;
+  status: string;
+  exists_output: boolean;
+  video_url: string | null;
+  caption_url: string | null;
+  cover_url: string | null;
+  pov_text?: string;
+  caption_text?: string;
+  input_preview_url: string | null;
+  output_preview_url: string | null;
+  input_signed_url?: string | null;
+  output_signed_url?: string | null;
+  has_output: boolean;
+}
+
 interface PreviewCardProps {
-  povText: string;
-  brandName?: string;
-  brandHandle?: string;
-  logoUrl?: string | null;
+  display_name?: string;
+  instagram_handle?: string;
+  logoSignedUrl?: string | null;
   isVerified?: boolean;
-  selectedVideoFilename?: string | null;
-  inputPreviewUrl?: string | null;
-  outputPreviewUrl?: string | null;
-  hasOutput?: boolean;
+  selectedVideo?: VideoStatus | null;
   previewMode?: "input" | "output";
   onPreviewModeChange?: (mode: "input" | "output") => void;
 }
 
 export const PreviewCard: React.FC<PreviewCardProps> = ({ 
-  povText,
-  brandName = "", 
-  brandHandle = "", 
-  logoUrl = null, 
+  display_name = "", 
+  instagram_handle = "", 
+  logoSignedUrl = null, 
   isVerified = true,
-  selectedVideoFilename = null,
-  inputPreviewUrl = null,
-  outputPreviewUrl = null,
-  hasOutput = false,
+  selectedVideo = null,
   previewMode = "input",
   onPreviewModeChange
 }) => {
-  const nameToDisplay = brandName && brandName.trim() ? brandName.trim() : "Nome do Perfil";
-  const handleToDisplay = brandHandle && brandHandle.trim() ? brandHandle.trim() : "@seuperfil";
+  const nameToDisplay = display_name && display_name.trim() ? display_name.trim() : "Nome do Perfil";
+  const handleToDisplay = instagram_handle && instagram_handle.trim() ? instagram_handle.trim() : "@seuperfil";
+  const selectedVideoFilename = selectedVideo?.filename || null;
+  const povText = selectedVideo?.pov_text || "";
+
+  const inputPreviewUrl = selectedVideo?.input_signed_url || selectedVideo?.input_preview_url || null;
+  const outputPreviewUrl = selectedVideo?.output_signed_url || selectedVideo?.output_preview_url || null;
+  const hasOutput = selectedVideo?.has_output || selectedVideo?.exists_output || false;
+
+  // Estado Vazio Elegante quando nenhum vídeo está focado
+  if (!selectedVideoFilename) {
+    return (
+      <div style={{
+        backgroundColor: 'var(--bg-secondary)',
+        borderRadius: 'var(--radius-xl)',
+        padding: '32px 24px',
+        border: '1px solid var(--border-color)',
+        boxShadow: 'var(--shadow-md)',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '16px',
+        height: '100%',
+        minHeight: '580px',
+        width: '100%',
+        backdropFilter: 'var(--blur-sm)',
+        WebkitBackdropFilter: 'var(--blur-sm)',
+        textAlign: 'center',
+        fontFamily: 'var(--font-secondary)',
+        animation: 'fadeIn var(--transition-normal) forwards'
+      }}>
+        <div style={{
+          width: '72px',
+          height: '72px',
+          backgroundColor: 'rgba(34, 211, 238, 0.08)',
+          border: '1px solid rgba(34, 211, 238, 0.15)',
+          borderRadius: '50%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: 'var(--accent-cyan)',
+          fontSize: '28px',
+          boxShadow: '0 0 20px rgba(34, 211, 238, 0.1)',
+          animation: 'float 3s ease-in-out infinite'
+        }}>
+          📱
+        </div>
+        <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)', fontFamily: 'var(--font-primary)' }}>
+          Visualização do Reels
+        </h3>
+        <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)', maxWidth: '240px', lineHeight: '1.5' }}>
+          Selecione um vídeo na fila para visualizar
+        </p>
+      </div>
+    );
+  }
   
   return (
     <div style={{
@@ -41,86 +105,84 @@ export const PreviewCard: React.FC<PreviewCardProps> = ({
       flexDirection: 'column',
       alignItems: 'center',
       gap: '16px',
+      width: '100%',
       backdropFilter: 'var(--blur-sm)',
-      WebkitBackdropFilter: 'var(--blur-sm)'
+      WebkitBackdropFilter: 'var(--blur-sm)',
+      animation: 'fadeIn var(--transition-normal) forwards'
     }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
         <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)', fontFamily: 'var(--font-primary)' }}>
           Pré-visualização do Layout
         </h3>
-        {selectedVideoFilename && (
-          <span style={{ fontSize: '11px', color: 'var(--accent-cyan)', fontWeight: 600 }}>
-            🎬 {selectedVideoFilename}
-          </span>
-        )}
+        <span style={{ fontSize: '11px', color: 'var(--accent-cyan)', fontWeight: 600, maxWidth: '140px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={selectedVideoFilename}>
+          🎬 {selectedVideoFilename}
+        </span>
       </div>
 
       {/* Seletor Original/Renderizado */}
-      {selectedVideoFilename && (
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '4px',
-          backgroundColor: 'rgba(255, 255, 255, 0.04)',
-          padding: '4px',
-          borderRadius: 'var(--radius-md)',
-          width: '100%',
-          justifyContent: 'center',
-          border: '1px solid var(--border-color)'
-        }}>
-          <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', marginRight: '8px', marginLeft: '6px' }}>
-            Visualizar:
-          </span>
-          <button
-            onClick={() => onPreviewModeChange?.("input")}
-            style={{
-              flex: 1,
-              padding: '6px 12px',
-              border: 'none',
-              borderRadius: 'var(--radius-sm)',
-              fontSize: '11px',
-              fontWeight: 600,
-              cursor: 'pointer',
-              backgroundColor: previewMode === "input" ? 'rgba(255,255,255,0.08)' : 'transparent',
-              color: previewMode === "input" ? 'var(--text-primary)' : 'var(--text-secondary)',
-              boxShadow: previewMode === "input" ? '0 1px 3px rgba(0,0,0,0.2)' : 'none',
-              transition: 'all 0.2s',
-              fontFamily: 'var(--font-secondary)'
-            }}
-          >
-            Original
-          </button>
-          <button
-            onClick={() => {
-              if (hasOutput) {
-                onPreviewModeChange?.("output");
-              }
-            }}
-            disabled={!hasOutput}
-            style={{
-              flex: 1,
-              padding: '6px 12px',
-              border: 'none',
-              borderRadius: 'var(--radius-sm)',
-              fontSize: '11px',
-              fontWeight: 600,
-              cursor: hasOutput ? 'pointer' : 'not-allowed',
-              backgroundColor: previewMode === "output" ? 'rgba(255,255,255,0.08)' : 'transparent',
-              color: previewMode === "output" 
-                ? 'var(--text-primary)' 
-                : hasOutput 
-                  ? 'var(--text-secondary)' 
-                  : 'var(--text-muted)',
-              boxShadow: previewMode === "output" ? '0 1px 3px rgba(0,0,0,0.2)' : 'none',
-              transition: 'all 0.2s',
-              fontFamily: 'var(--font-secondary)'
-            }}
-            title={!hasOutput ? "Gere o vídeo para visualizar o resultado final." : ""}
-          >
-            Renderizado
-          </button>
-        </div>
-      )}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '4px',
+        backgroundColor: 'rgba(255, 255, 255, 0.04)',
+        padding: '4px',
+        borderRadius: 'var(--radius-md)',
+        width: '100%',
+        justifyContent: 'center',
+        border: '1px solid var(--border-color)'
+      }}>
+        <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', marginRight: '8px', marginLeft: '6px' }}>
+          Visualizar:
+        </span>
+        <button
+          onClick={() => onPreviewModeChange?.("input")}
+          style={{
+            flex: 1,
+            padding: '6px 12px',
+            border: 'none',
+            borderRadius: 'var(--radius-sm)',
+            fontSize: '11px',
+            fontWeight: 600,
+            cursor: 'pointer',
+            backgroundColor: previewMode === "input" ? 'rgba(255,255,255,0.08)' : 'transparent',
+            color: previewMode === "input" ? 'var(--text-primary)' : 'var(--text-secondary)',
+            boxShadow: previewMode === "input" ? '0 1px 3px rgba(0,0,0,0.2)' : 'none',
+            transition: 'all 0.2s',
+            fontFamily: 'var(--font-secondary)'
+          }}
+        >
+          Original
+        </button>
+        <button
+          onClick={() => {
+            if (hasOutput) {
+              onPreviewModeChange?.("output");
+            }
+          }}
+          disabled={!hasOutput}
+          style={{
+            flex: 1,
+            padding: '6px 12px',
+            border: 'none',
+            borderRadius: 'var(--radius-sm)',
+            fontSize: '11px',
+            fontWeight: 600,
+            cursor: hasOutput ? 'pointer' : 'not-allowed',
+            backgroundColor: previewMode === "output" ? 'rgba(255,255,255,0.08)' : 'transparent',
+            color: previewMode === "output" 
+              ? 'var(--text-primary)' 
+              : hasOutput 
+                ? 'var(--text-secondary)' 
+                : 'var(--text-muted)',
+            boxShadow: previewMode === "output" ? '0 1px 3px rgba(0,0,0,0.2)' : 'none',
+            transition: 'all 0.2s',
+            fontFamily: 'var(--font-secondary)'
+          }}
+          title={!hasOutput ? "Gere o vídeo para visualizar o resultado final." : ""}
+        >
+          Renderizado
+        </button>
+      </div>
       
       {/* Moldura celular */}
       <div style={{
@@ -173,21 +235,21 @@ export const PreviewCard: React.FC<PreviewCardProps> = ({
             fontWeight: 'bold',
             overflow: 'hidden'
           }}>
-            {logoUrl ? (
+            {logoSignedUrl ? (
               <img 
-                src={logoUrl} 
+                src={logoSignedUrl} 
                 alt="Logo" 
                 style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
                 onError={(e) => {
                   (e.target as HTMLElement).style.display = 'none';
                   const parent = (e.target as HTMLElement).parentElement;
                   if (parent) {
-                    parent.innerText = brandName && brandName.trim() ? brandName.trim()[0].toUpperCase() : '👤';
+                    parent.innerText = display_name && display_name.trim() ? display_name.trim()[0].toUpperCase() : '👤';
                   }
                 }}
               />
             ) : (
-              brandName && brandName.trim() ? brandName.trim()[0].toUpperCase() : '👤'
+              display_name && display_name.trim() ? display_name.trim()[0].toUpperCase() : '👤'
             )}
           </div>
           <div>
@@ -258,37 +320,31 @@ export const PreviewCard: React.FC<PreviewCardProps> = ({
           position: 'relative',
           overflow: 'hidden'
         }}>
-          {selectedVideoFilename ? (
-            (() => {
-              const videoSrc = previewMode === "output" && hasOutput ? outputPreviewUrl : inputPreviewUrl;
-              if (videoSrc) {
-                return (
-                  <video
-                    key={videoSrc}
-                    src={videoSrc}
-                    controls
-                    muted
-                    playsInline
-                    preload="metadata"
-                    style={{
-                      width: '100%',
-                      height: '100%',
-                      objectFit: 'contain',
-                      borderRadius: '11px'
-                    }}
-                  />
-                );
-              }
-              return <span style={{ zIndex: 1, fontWeight: 500 }}>Carregando vídeo...</span>;
-            })()
-          ) : (
-            <div style={{ textAlign: 'center', padding: '20px', color: '#64748b', zIndex: 1, fontWeight: 500 }}>
-              Selecione um vídeo na fila para visualizar
-            </div>
-          )}
+          {(() => {
+            const videoSrc = previewMode === "output" && hasOutput ? outputPreviewUrl : inputPreviewUrl;
+            if (videoSrc) {
+              return (
+                <video
+                  key={videoSrc}
+                  src={videoSrc}
+                  controls
+                  muted
+                  playsInline
+                  preload="metadata"
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'contain',
+                    borderRadius: '11px'
+                  }}
+                />
+              );
+            }
+            return <span style={{ zIndex: 1, fontWeight: 500 }}>Carregando vídeo...</span>;
+          })()}
         </div>
 
-        {/* Rodapé Limpo (Branco Sem Texto) */}
+        {/* Rodapé Limpo */}
         <div style={{
           height: '24px',
           backgroundColor: '#ffffff',

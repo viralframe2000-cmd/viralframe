@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import type { VideoStatus } from '../lib/api';
 
 interface VideoTableProps {
@@ -10,6 +10,7 @@ interface VideoTableProps {
   processingVideos: string[];
   selectedVideoId: string | null;
   onSelectVideo: (id: string) => void;
+  isUploading?: boolean;
 }
 
 export const VideoTable: React.FC<VideoTableProps> = ({
@@ -20,8 +21,19 @@ export const VideoTable: React.FC<VideoTableProps> = ({
   onDelete,
   processingVideos,
   selectedVideoId,
-  onSelectVideo
+  onSelectVideo,
+  isUploading = false
 }) => {
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   if (videos.length === 0) {
     return (
       <div style={{
@@ -39,18 +51,9 @@ export const VideoTable: React.FC<VideoTableProps> = ({
     );
   }
 
-  const headerStyle: React.CSSProperties = {
-    padding: '16px 20px',
-    fontWeight: 600,
-    color: 'var(--text-primary)',
-    fontFamily: 'var(--font-primary)',
-    borderBottom: '1px solid var(--border-color)',
-    fontSize: '13px'
-  };
-
   const inputFocusStyle = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    e.target.style.borderColor = 'rgba(59, 130, 246, 0.6)';
-    e.target.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.15)';
+    e.target.style.borderColor = 'rgba(34, 211, 238, 0.6)';
+    e.target.style.boxShadow = '0 0 0 3px rgba(34, 211, 238, 0.15)';
     e.target.style.background = 'rgba(255, 255, 255, 0.06)';
   };
 
@@ -58,6 +61,289 @@ export const VideoTable: React.FC<VideoTableProps> = ({
     e.target.style.borderColor = 'rgba(255, 255, 255, 0.08)';
     e.target.style.boxShadow = 'none';
     e.target.style.background = 'rgba(255, 255, 255, 0.03)';
+  };
+
+  // Renderizador de Status Badge
+  const renderStatusBadge = (video: VideoStatus, isProcessing: boolean) => {
+    let color = 'var(--text-secondary)';
+    let bg = 'rgba(255,255,255,0.05)';
+    let border = 'rgba(255,255,255,0.08)';
+    let text = 'Pendente';
+    let icon = '⚪';
+
+    if (isProcessing || video.status === 'processing') {
+      color = '#3b82f6';
+      bg = 'rgba(59, 130, 246, 0.15)';
+      border = 'rgba(59, 130, 246, 0.3)';
+      text = 'Processando';
+      icon = '⚙️';
+    } else if (video.status === 'queued') {
+      color = '#f59e0b';
+      bg = 'rgba(245, 158, 11, 0.15)';
+      border = 'rgba(245, 158, 11, 0.3)';
+      text = 'Na fila';
+      icon = '⏳';
+    } else if (video.exists_output) {
+      color = '#10b981';
+      bg = 'rgba(16, 185, 129, 0.15)';
+      border = 'rgba(16, 185, 129, 0.3)';
+      text = 'Renderizado';
+      icon = '✅';
+    } else if (video.status === 'failed') {
+      color = '#ef4444';
+      bg = 'rgba(239, 68, 68, 0.15)';
+      border = 'rgba(239, 68, 68, 0.3)';
+      text = 'Falhou';
+      icon = '❌';
+    } else if (video.status === 'edited') {
+      color = 'var(--accent-purple)';
+      bg = 'rgba(139, 92, 246, 0.15)';
+      border = 'rgba(139, 92, 246, 0.3)';
+      text = 'Editado';
+      icon = '✍️';
+    } else if (video.status === 'uploaded') {
+      color = 'var(--accent-cyan)';
+      bg = 'rgba(34, 211, 238, 0.1)';
+      border = 'rgba(34, 211, 238, 0.25)';
+      text = 'Enviado';
+      icon = '📥';
+    }
+
+    return (
+      <span style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: '6px',
+        color,
+        backgroundColor: bg,
+        border: `1px solid ${border}`,
+        padding: '4px 10px',
+        borderRadius: '12px',
+        fontWeight: 600,
+        fontSize: '11px',
+        whiteSpace: 'nowrap'
+      }}>
+        {icon} {text}
+      </span>
+    );
+  };
+
+  // Renderizador de Layout Mobile (Cards)
+  if (isMobile) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%' }}>
+        {videos.map((video) => {
+          const fileMeta = metadata[video.filename] || { pov_text: '', caption_text: '' };
+          const isProcessing = video.id ? processingVideos.includes(video.id) : false;
+          const isSelected = video.id ? selectedVideoId === video.id : false;
+          const isQueued = video.status === 'queued' || video.status === 'processing';
+
+          return (
+            <div
+              key={video.id || video.filename}
+              onClick={() => video.id && onSelectVideo(video.id)}
+              style={{
+                backgroundColor: isSelected ? 'rgba(255, 255, 255, 0.04)' : 'var(--bg-secondary)',
+                border: '1px solid ' + (isSelected ? 'var(--accent-cyan)' : 'var(--border-color)'),
+                borderRadius: 'var(--radius-lg)',
+                padding: '16px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '14px',
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+                boxShadow: isSelected ? '0 0 14px rgba(34, 211, 238, 0.15)' : 'var(--shadow-sm)'
+              }}
+            >
+              {/* Header do Card */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
+                <span style={{ 
+                  fontWeight: 600, 
+                  color: 'var(--text-primary)', 
+                  fontSize: '13.5px',
+                  wordBreak: 'break-all',
+                  maxWidth: '65%'
+                }}>
+                  {video.filename}
+                </span>
+                {renderStatusBadge(video, isProcessing)}
+              </div>
+
+              {/* Formulários de Input */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }} onClick={e => e.stopPropagation()}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <label style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 500 }}>Frase POV</label>
+                  <input
+                    type="text"
+                    value={fileMeta.pov_text}
+                    onChange={(e) => onMetadataChange(video.filename, 'pov_text', e.target.value)}
+                    onFocus={inputFocusStyle}
+                    onBlur={inputBlurStyle}
+                    placeholder="Ex: POV: você entrou no grupo certo"
+                    style={{
+                      width: '100%',
+                      padding: '8px 12px',
+                      background: 'rgba(255, 255, 255, 0.03)',
+                      border: '1px solid rgba(255, 255, 255, 0.08)',
+                      borderRadius: 'var(--radius-md)',
+                      fontSize: '12px',
+                      color: 'var(--text-primary)',
+                      outline: 'none',
+                      transition: 'all 0.2s'
+                    }}
+                  />
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <label style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 500 }}>Legenda</label>
+                  <textarea
+                    value={fileMeta.caption_text}
+                    onChange={(e) => onMetadataChange(video.filename, 'caption_text', e.target.value)}
+                    onFocus={inputFocusStyle}
+                    onBlur={inputBlurStyle}
+                    placeholder="Legenda para o Instagram"
+                    rows={2}
+                    style={{
+                      width: '100%',
+                      padding: '8px 12px',
+                      background: 'rgba(255, 255, 255, 0.03)',
+                      border: '1px solid rgba(255, 255, 255, 0.08)',
+                      borderRadius: 'var(--radius-md)',
+                      fontSize: '12px',
+                      color: 'var(--text-primary)',
+                      fontFamily: 'inherit',
+                      outline: 'none',
+                      resize: 'none',
+                      transition: 'all 0.2s'
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* Botões de Ação */}
+              <div style={{ 
+                display: 'flex', 
+                gap: '8px', 
+                flexWrap: 'wrap', 
+                borderTop: '1px solid var(--border-color)', 
+                paddingTop: '12px' 
+              }} 
+                onClick={e => e.stopPropagation()}
+              >
+                <button
+                  onClick={() => video.id && onSelectVideo(video.id)}
+                  style={{
+                    backgroundColor: isSelected ? 'rgba(34, 211, 238, 0.15)' : 'rgba(255, 255, 255, 0.04)',
+                    color: isSelected ? 'var(--accent-cyan)' : 'var(--text-primary)',
+                    border: '1px solid ' + (isSelected ? 'rgba(34, 211, 238, 0.3)' : 'var(--border-color)'),
+                    padding: '6px 12px',
+                    borderRadius: '8px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    fontSize: '11px',
+                    flex: 1
+                  }}
+                >
+                  Visualizar
+                </button>
+
+                <button
+                  onClick={() => video.id && onRender(video.id)}
+                  disabled={isProcessing || isQueued || isUploading}
+                  style={{
+                    background: 'var(--gradient-cyan-blue)',
+                    color: 'white',
+                    border: 'none',
+                    padding: '6px 12px',
+                    borderRadius: '8px',
+                    fontWeight: 600,
+                    cursor: (isProcessing || isQueued || isUploading) ? 'not-allowed' : 'pointer',
+                    fontSize: '11px',
+                    opacity: (isProcessing || isQueued || isUploading) ? 0.5 : 1,
+                    flex: 1
+                  }}
+                >
+                  Gerar
+                </button>
+                
+                {video.exists_output && (
+                  <div style={{ display: 'flex', gap: '6px', width: '100%', marginTop: '4px' }}>
+                    <a
+                      href={video.video_url || '#'}
+                      download
+                      style={{
+                        background: 'rgba(255, 255, 255, 0.04)',
+                        border: '1px solid var(--border-color)',
+                        color: 'var(--text-primary)',
+                        padding: '6px 10px',
+                        borderRadius: '8px',
+                        textDecoration: 'none',
+                        fontSize: '11px',
+                        fontWeight: 600,
+                        flex: 1,
+                        textAlign: 'center',
+                        display: 'block'
+                      }}
+                    >
+                      🎥 Vídeo
+                    </a>
+                    <a
+                      href={video.caption_url || '#'}
+                      download
+                      style={{
+                        background: 'rgba(255, 255, 255, 0.04)',
+                        border: '1px solid var(--border-color)',
+                        color: 'var(--text-primary)',
+                        padding: '6px 10px',
+                        borderRadius: '8px',
+                        textDecoration: 'none',
+                        fontSize: '11px',
+                        fontWeight: 600,
+                        flex: 1,
+                        textAlign: 'center',
+                        display: 'block'
+                      }}
+                    >
+                      📝 Legenda
+                    </a>
+                  </div>
+                )}
+                
+                <button
+                  onClick={() => video.id && onDelete(video.id)}
+                  disabled={isUploading}
+                  style={{
+                    backgroundColor: 'transparent',
+                    color: 'var(--color-error)',
+                    border: '1px solid rgba(239, 68, 68, 0.3)',
+                    padding: '6px 10px',
+                    borderRadius: '8px',
+                    cursor: isUploading ? 'not-allowed' : 'pointer',
+                    fontSize: '11px',
+                    fontWeight: 600,
+                    width: '100%',
+                    marginTop: '4px',
+                    opacity: isUploading ? 0.5 : 1
+                  }}
+                >
+                  Excluir Vídeo
+                </button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
+
+  // Renderizador de Layout Desktop (Tabela Aprimorada)
+  const headerStyle: React.CSSProperties = {
+    padding: '16px 20px',
+    fontWeight: 600,
+    color: 'var(--text-primary)',
+    fontFamily: 'var(--font-primary)',
+    borderBottom: '1px solid var(--border-color)',
+    fontSize: '13px'
   };
 
   return (
@@ -85,6 +371,7 @@ export const VideoTable: React.FC<VideoTableProps> = ({
               const fileMeta = metadata[video.filename] || { pov_text: '', caption_text: '' };
               const isProcessing = video.id ? processingVideos.includes(video.id) : false;
               const isSelected = video.id ? selectedVideoId === video.id : false;
+              const isQueued = video.status === 'queued' || video.status === 'processing';
               
               return (
                 <tr 
@@ -159,88 +446,7 @@ export const VideoTable: React.FC<VideoTableProps> = ({
 
                   {/* Status */}
                   <td style={{ padding: '16px 20px', textAlign: 'center' }}>
-                    {isProcessing ? (
-                      <span style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                        color: '#60a5fa',
-                        backgroundColor: 'rgba(59, 130, 246, 0.15)',
-                        border: '1px solid rgba(59, 130, 246, 0.25)',
-                        padding: '4px 10px',
-                        borderRadius: '12px',
-                        fontWeight: 600,
-                        fontSize: '11px'
-                      }}>
-                        ⚡ Editando...
-                      </span>
-                    ) : video.status === 'queued' ? (
-                      <span style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                        color: '#f59e0b',
-                        backgroundColor: 'rgba(245, 158, 11, 0.15)',
-                        border: '1px solid rgba(245, 158, 11, 0.25)',
-                        padding: '4px 10px',
-                        borderRadius: '12px',
-                        fontWeight: 600,
-                        fontSize: '11px'
-                      }}>
-                        ⏳ Na fila
-                      </span>
-                    ) : video.status === 'processing' ? (
-                      <span style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                        color: '#3b82f6',
-                        backgroundColor: 'rgba(59, 130, 246, 0.15)',
-                        border: '1px solid rgba(59, 130, 246, 0.25)',
-                        padding: '4px 10px',
-                        borderRadius: '12px',
-                        fontWeight: 600,
-                        fontSize: '11px'
-                      }}>
-                        ⚙️ Processando
-                      </span>
-                    ) : video.exists_output ? (
-                      <span style={{
-                        color: '#4ade80',
-                        backgroundColor: 'rgba(34, 197, 94, 0.15)',
-                        border: '1px solid rgba(34, 197, 94, 0.25)',
-                        padding: '4px 10px',
-                        borderRadius: '12px',
-                        fontWeight: 600,
-                        fontSize: '11px'
-                      }}>
-                        Pronto
-                      </span>
-                    ) : video.status === 'failed' ? (
-                      <span style={{
-                        color: '#ef4444',
-                        backgroundColor: 'rgba(239, 68, 68, 0.15)',
-                        border: '1px solid rgba(239, 68, 68, 0.25)',
-                        padding: '4px 10px',
-                        borderRadius: '12px',
-                        fontWeight: 600,
-                        fontSize: '11px'
-                      }}>
-                        Falhou
-                      </span>
-                    ) : (
-                      <span style={{
-                        color: 'var(--text-secondary)',
-                        backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                        border: '1px solid rgba(255, 255, 255, 0.06)',
-                        padding: '4px 10px',
-                        borderRadius: '12px',
-                        fontWeight: 600,
-                        fontSize: '11px'
-                      }}>
-                        Pendente
-                      </span>
-                    )}
+                    {renderStatusBadge(video, isProcessing)}
                   </td>
 
                   {/* Ações */}
@@ -280,7 +486,7 @@ export const VideoTable: React.FC<VideoTableProps> = ({
 
                       <button
                         onClick={() => video.id && onRender(video.id)}
-                        disabled={isProcessing || video.status === 'queued' || video.status === 'processing'}
+                        disabled={isProcessing || isQueued || isUploading}
                         style={{
                           background: 'var(--gradient-cyan-blue)',
                           color: 'white',
@@ -288,13 +494,13 @@ export const VideoTable: React.FC<VideoTableProps> = ({
                           padding: '6px 12px',
                           borderRadius: '8px',
                           fontWeight: 600,
-                          cursor: 'pointer',
+                          cursor: (isProcessing || isQueued || isUploading) ? 'not-allowed' : 'pointer',
                           fontSize: '11px',
                           transition: 'all 0.2s',
-                          opacity: (isProcessing || video.status === 'queued' || video.status === 'processing') ? 0.5 : 1
+                          opacity: (isProcessing || isQueued || isUploading) ? 0.5 : 1
                         }}
                         onMouseEnter={e => {
-                          if (!isProcessing && video.status !== 'queued' && video.status !== 'processing') e.currentTarget.style.opacity = '0.9';
+                          if (!isProcessing && !isQueued && !isUploading) e.currentTarget.style.opacity = '0.9';
                         }}
                         onMouseLeave={e => {
                           e.currentTarget.style.opacity = '1';
@@ -364,24 +570,30 @@ export const VideoTable: React.FC<VideoTableProps> = ({
                       
                       <button
                         onClick={() => video.id && onDelete(video.id)}
+                        disabled={isUploading}
                         style={{
                           backgroundColor: 'transparent',
                           color: 'var(--color-error)',
                           border: '1px solid rgba(239, 68, 68, 0.3)',
                           padding: '6px 10px',
                           borderRadius: '8px',
-                          cursor: 'pointer',
+                          cursor: isUploading ? 'not-allowed' : 'pointer',
                           fontSize: '11px',
                           fontWeight: 600,
-                          transition: 'all 0.2s'
+                          transition: 'all 0.2s',
+                          opacity: isUploading ? 0.5 : 1
                         }}
                         onMouseEnter={e => {
-                          e.currentTarget.style.background = 'var(--color-error-bg)';
-                          e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.5)';
+                          if (!isUploading) {
+                            e.currentTarget.style.background = 'var(--color-error-bg)';
+                            e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.5)';
+                          }
                         }}
                         onMouseLeave={e => {
-                          e.currentTarget.style.background = 'transparent';
-                          e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.3)';
+                          if (!isUploading) {
+                            e.currentTarget.style.background = 'transparent';
+                            e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.3)';
+                          }
                         }}
                       >
                         Excluir

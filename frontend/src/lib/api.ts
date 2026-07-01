@@ -2,7 +2,7 @@ import { supabase } from './supabase';
 import type { ProfileSettingsData } from './profile';
 import { getProfile as getProfileDirect, saveProfile as saveProfileDirect, uploadProfileLogo, clearProfile as clearProfileDirect } from './profile';
 import type { VideoStatus } from './videos';
-import { uploadVideos as uploadVideosDirect, listVideos as listVideosDirect, saveMetadata as saveMetadataDirect, deleteVideo as deleteVideoDirect } from './videos';
+import { uploadVideos as uploadVideosDirect, listVideos as listVideosDirect, saveMetadata as saveMetadataDirect, deleteVideo as deleteVideoDirect, deleteAllVideos as deleteAllVideosDirect } from './videos';
 import type { PhraseItem, PhraseListResponse } from './phrases';
 import { uploadPhrases as uploadPhrasesDirect, listPhrases as listPhrasesDirect, applyRandomPhrases as applyRandomPhrasesDirect } from './phrases';
 import type { JobStatus } from './renderJobs';
@@ -33,7 +33,8 @@ export async function healthCheck() {
 export const uploadVideos = uploadVideosDirect;
 export const listVideos = listVideosDirect;
 export const saveMetadata = saveMetadataDirect;
-export const deleteVideo = deleteVideoDirect; // Agora aceita videoId: string
+export const deleteVideo = deleteVideoDirect; // Aceita videoId: string
+export const deleteAllVideos = deleteAllVideosDirect; // Nova ação para limpar fila inteira
 
 // Vinculações de render jobs
 export async function renderVideo(videoId: string) {

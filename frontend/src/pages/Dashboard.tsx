@@ -7,7 +7,7 @@ import { JobProgress } from '../components/JobProgress';
 import { PreviewCard } from '../components/PreviewCard';
 import { PhraseBankUploader } from '../components/PhraseBankUploader';
 import { PrivacyCard } from '../components/PrivacyCard';
-import { listVideos, saveMetadata, renderVideo, renderAll, getJob, deleteVideo, healthCheck, applyRandomPhrases, downloadAllFiles } from '../lib/api';
+import { listVideos, saveMetadata, renderVideo, renderAll, getJob, deleteVideo, healthCheck, applyRandomPhrases, downloadAllFiles, getProfile, deleteAllVideos } from '../lib/api';
 import type { VideoStatus, JobStatus } from '../lib/api';
 import { isSupabaseConfigured } from '../lib/supabase';
 
@@ -19,18 +19,34 @@ export const Dashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [ffmpegInstalled, setFfmpegInstalled] = useState<boolean>(true);
 
+  // Estados de Upload e Modais de Confirmação
+  const [isUploading, setIsUploading] = useState<boolean>(false);
+  const [showPrivacyModal, setShowPrivacyModal] = useState<boolean>(false);
+  const [showDeleteAllModal, setShowDeleteAllModal] = useState<boolean>(false);
+  const [deletingAll, setDeletingAll] = useState<boolean>(false);
+
   const [selectedVideoId, setSelectedVideoId] = useState<string | null>(null);
-  const [profile, setProfile] = useState<{ display_name: string; handle: string; verified: boolean; logo_path?: string }>({
+  const [profile, setProfile] = useState<{
+    display_name: string;
+    instagram_handle: string;
+    logoSignedUrl: string;
+    verified: boolean;
+  }>({
     display_name: '',
-    handle: '',
-    verified: true,
-    logo_path: undefined
+    instagram_handle: '',
+    logoSignedUrl: '',
+    verified: true
   });
   const [downloadStatus, setDownloadStatus] = useState<string | null>(null);
   const [previewMode, setPreviewMode] = useState<"input" | "output">("input");
 
   const handleProfileChange = (newProfile: { display_name: string; handle: string; verified: boolean; logo_path?: string }) => {
-    setProfile(prev => ({ ...prev, ...newProfile }));
+    setProfile({
+      display_name: newProfile.display_name,
+      instagram_handle: newProfile.handle,
+      logoSignedUrl: newProfile.logo_path || '',
+      verified: newProfile.verified
+    });
   };
 
   const handleDownloadAll = () => {
@@ -55,10 +71,34 @@ export const Dashboard: React.FC = () => {
     }
   };
 
+  const handleDeleteAllVideos = async () => {
+    setDeletingAll(true);
+    try {
+      const result = await deleteAllVideos();
+      alert(`Sucesso! ${result.deletedCount} vídeos foram excluídos da fila.`);
+      setSelectedVideoId(null);
+      setShowDeleteAllModal(false);
+      loadData();
+    } catch (err: any) {
+      alert(err.message || 'Erro ao excluir todos os vídeos.');
+    } finally {
+      setDeletingAll(false);
+    }
+  };
+
   const loadData = async () => {
     try {
       const health = await healthCheck();
       setFfmpegInstalled(health.ffmpeg_installed);
+
+      // Carrega perfil de usuário real do banco no primeiro carregamento
+      const userProfile = await getProfile();
+      setProfile({
+        display_name: userProfile.display_name,
+        instagram_handle: userProfile.instagram_handle || userProfile.handle || '',
+        logoSignedUrl: userProfile.logo_path || '',
+        verified: userProfile.verified
+      });
 
       const videoList = await listVideos();
       setVideos(videoList);
@@ -125,9 +165,21 @@ export const Dashboard: React.FC = () => {
         [field]: value
       }
     }));
+
+    // Sincroniza imediatamente o selectedVideo local em tempo real
+    setVideos(prev => prev.map(v => {
+      if (v.filename === filename) {
+        return {
+          ...v,
+          [field]: value
+        };
+      }
+      return v;
+    }));
   };
 
   const handleSaveMetadata = async () => {
+    if (isUploading) return;
     const items = Object.entries(metadata).map(([filename, val]) => ({
       filename,
       pov_text: val.pov_text,
@@ -143,7 +195,8 @@ export const Dashboard: React.FC = () => {
   };
 
   const handleRenderSingle = async (videoId: string) => {
-    if (!profile.display_name.trim() || !profile.handle.trim()) {
+    if (isUploading) return;
+    if (!profile.display_name.trim() || !profile.instagram_handle.trim()) {
       alert("Preencha as informações do perfil antes de gerar os vídeos.");
       return;
     }
@@ -162,7 +215,8 @@ export const Dashboard: React.FC = () => {
   };
 
   const handleRenderAll = async () => {
-    if (!profile.display_name.trim() || !profile.handle.trim()) {
+    if (isUploading) return;
+    if (!profile.display_name.trim() || !profile.instagram_handle.trim()) {
       alert("Preencha as informações do perfil antes de gerar os vídeos.");
       return;
     }
@@ -185,13 +239,13 @@ export const Dashboard: React.FC = () => {
   };
 
   const handleDelete = async (videoId: string) => {
+    if (isUploading) return;
     const targetVideo = videos.find(v => v.id === videoId);
     if (!targetVideo) return;
 
     if (confirm(`Tem certeza que deseja apagar ${targetVideo.filename}?`)) {
       try {
         await deleteVideo(videoId);
-        // Reseta foco caso o vídeo deletado estivesse selecionado
         if (selectedVideoId === videoId) {
           setSelectedVideoId(null);
         }
@@ -203,9 +257,6 @@ export const Dashboard: React.FC = () => {
   };
 
   const selectedVideo = videos.find(v => v.id === selectedVideoId);
-  const currentPov = selectedVideo
-    ? metadata[selectedVideo.filename]?.pov_text || selectedVideo.pov_text || ''
-    : '';
 
   const topButtonStyle: React.CSSProperties = {
     background: 'rgba(255, 255, 255, 0.04)',
@@ -215,15 +266,17 @@ export const Dashboard: React.FC = () => {
     borderRadius: 'var(--radius-md)',
     fontSize: '13px',
     fontWeight: 600,
-    cursor: 'pointer',
+    cursor: isUploading ? 'not-allowed' : 'pointer',
     display: 'flex',
     alignItems: 'center',
     gap: '6px',
     fontFamily: 'var(--font-secondary)',
-    transition: 'all var(--transition-fast)'
+    transition: 'all var(--transition-fast)',
+    opacity: isUploading ? 0.4 : 1
   };
 
   const handleButtonMouseEnter = (e: React.MouseEvent<HTMLButtonElement>) => {
+    if (isUploading) return;
     e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
     e.currentTarget.style.borderColor = 'var(--border-hover)';
   };
@@ -288,21 +341,48 @@ export const Dashboard: React.FC = () => {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '24px' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
             <ProfileSettings onProfileChange={handleProfileChange} />
-            <VideoUploader onUploadSuccess={loadData} />
+            <VideoUploader onUploadSuccess={loadData} setIsDashboardUploading={setIsUploading} />
             <PhraseBankUploader onApplySuccess={handleApplyPhrasesSuccess} />
-            <PrivacyCard />
+            
+            <button
+              onClick={() => setShowPrivacyModal(true)}
+              style={{
+                background: 'rgba(255, 255, 255, 0.02)',
+                border: '1px dashed var(--border-color)',
+                color: 'var(--text-secondary)',
+                padding: '12px 14px',
+                borderRadius: 'var(--radius-md)',
+                fontSize: '12px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                fontFamily: 'var(--font-secondary)',
+                transition: 'all var(--transition-fast)'
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
+                e.currentTarget.style.borderColor = 'var(--accent-cyan)';
+                e.currentTarget.style.color = 'var(--text-primary)';
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.02)';
+                e.currentTarget.style.borderColor = 'var(--border-color)';
+                e.currentTarget.style.color = 'var(--text-secondary)';
+              }}
+            >
+              🛡️ Privacidade e LGPD
+            </button>
           </div>
           
           <PreviewCard 
-            povText={currentPov || ''} 
-            brandName={profile.display_name}
-            brandHandle={profile.handle}
-            logoUrl={profile.logo_path || ''}
+            display_name={profile.display_name}
+            instagram_handle={profile.instagram_handle}
+            logoSignedUrl={profile.logoSignedUrl}
             isVerified={profile.verified}
-            selectedVideoFilename={selectedVideo?.filename || null}
-            inputPreviewUrl={selectedVideo?.input_preview_url || null}
-            outputPreviewUrl={selectedVideo?.output_preview_url || null}
-            hasOutput={selectedVideo?.has_output || false}
+            selectedVideo={selectedVideo}
             previewMode={previewMode}
             onPreviewModeChange={(mode) => setPreviewMode(mode)}
           />
@@ -347,7 +427,7 @@ export const Dashboard: React.FC = () => {
               {/* Baixar Tudo ZIP */}
               <button
                 onClick={handleDownloadAll}
-                disabled={videos.length === 0}
+                disabled={videos.length === 0 || isUploading}
                 style={topButtonStyle}
                 onMouseEnter={handleButtonMouseEnter}
                 onMouseLeave={handleButtonMouseLeave}
@@ -358,6 +438,7 @@ export const Dashboard: React.FC = () => {
               {/* Botão aplicar aleatórias */}
               <button
                 onClick={async () => {
+                  if (isUploading) return;
                   try {
                     const updated = await applyRandomPhrases(false);
                     handleApplyPhrasesSuccess(updated);
@@ -366,7 +447,7 @@ export const Dashboard: React.FC = () => {
                     alert(err.message || "Erro ao preencher frases vazias.");
                   }
                 }}
-                disabled={videos.length === 0}
+                disabled={videos.length === 0 || isUploading}
                 style={topButtonStyle}
                 onMouseEnter={handleButtonMouseEnter}
                 onMouseLeave={handleButtonMouseLeave}
@@ -377,6 +458,7 @@ export const Dashboard: React.FC = () => {
               {/* Atualizar lista */}
               <button
                 onClick={loadData}
+                disabled={isUploading}
                 style={topButtonStyle}
                 onMouseEnter={handleButtonMouseEnter}
                 onMouseLeave={handleButtonMouseLeave}
@@ -387,27 +469,53 @@ export const Dashboard: React.FC = () => {
               {/* Salvar frases */}
               <button
                 onClick={handleSaveMetadata}
+                disabled={isUploading}
                 style={{
                   ...topButtonStyle,
                   border: '1px solid rgba(59, 130, 246, 0.4)',
                   color: 'var(--accent-cyan)'
                 }}
                 onMouseEnter={e => {
+                  if (isUploading) return;
                   e.currentTarget.style.background = 'rgba(59, 130, 246, 0.08)';
                   e.currentTarget.style.borderColor = 'rgba(59, 130, 246, 0.6)';
                 }}
                 onMouseLeave={e => {
+                  if (isUploading) return;
                   e.currentTarget.style.background = 'rgba(255, 255, 255, 0.04)';
                   e.currentTarget.style.borderColor = 'rgba(59, 130, 246, 0.4)';
                 }}
               >
                 💾 Salvar Frases
               </button>
+
+              {/* Botão Excluir Todos os Vídeos */}
+              <button
+                onClick={() => setShowDeleteAllModal(true)}
+                disabled={videos.length === 0 || isUploading}
+                style={{
+                  ...topButtonStyle,
+                  border: '1px solid rgba(239, 68, 68, 0.4)',
+                  color: 'var(--color-error)'
+                }}
+                onMouseEnter={e => {
+                  if (isUploading) return;
+                  e.currentTarget.style.background = 'rgba(239, 68, 68, 0.08)';
+                  e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.6)';
+                }}
+                onMouseLeave={e => {
+                  if (isUploading) return;
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.04)';
+                  e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.4)';
+                }}
+              >
+                🗑️ Limpar Fila
+              </button>
               
               {/* Gerar todos os vídeos */}
               <button
                 onClick={handleRenderAll}
-                disabled={videos.length === 0}
+                disabled={videos.length === 0 || isUploading}
                 style={{
                   background: 'var(--gradient-cyan-blue)',
                   color: 'white',
@@ -416,17 +524,17 @@ export const Dashboard: React.FC = () => {
                   borderRadius: 'var(--radius-md)',
                   fontSize: '13px',
                   fontWeight: 600,
-                  cursor: 'pointer',
+                  cursor: (videos.length === 0 || isUploading) ? 'not-allowed' : 'pointer',
                   display: 'flex',
                   alignItems: 'center',
                   gap: '6px',
                   fontFamily: 'var(--font-secondary)',
                   transition: 'opacity var(--transition-fast), transform var(--transition-fast)',
                   boxShadow: '0 0 12px rgba(59, 130, 246, 0.25)',
-                  opacity: videos.length === 0 ? 0.5 : 1
+                  opacity: (videos.length === 0 || isUploading) ? 0.5 : 1
                 }}
                 onMouseEnter={e => {
-                  if (videos.length > 0) e.currentTarget.style.opacity = '0.9';
+                  if (videos.length > 0 && !isUploading) e.currentTarget.style.opacity = '0.9';
                 }}
                 onMouseLeave={e => {
                   e.currentTarget.style.opacity = '1';
@@ -452,10 +560,148 @@ export const Dashboard: React.FC = () => {
                 setSelectedVideoId(id);
                 setPreviewMode("input");
               }}
+              isUploading={isUploading}
             />
           )}
         </div>
       </div>
+
+      {/* Modal de Privacidade e LGPD */}
+      {showPrivacyModal && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          backgroundColor: 'rgba(5, 8, 22, 0.85)',
+          backdropFilter: 'blur(16px)',
+          WebkitBackdropFilter: 'blur(16px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          padding: '24px',
+          animation: 'fadeIn var(--transition-fast) forwards'
+        }}
+          onClick={() => setShowPrivacyModal(false)}
+        >
+          <div style={{
+            width: '100%',
+            maxWidth: '460px',
+            position: 'relative',
+            maxHeight: '90vh',
+            overflowY: 'auto'
+          }}
+            onClick={e => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setShowPrivacyModal(false)}
+              style={{
+                position: 'absolute',
+                top: '16px',
+                right: '16px',
+                background: 'rgba(255,255,255,0.05)',
+                border: 'none',
+                color: 'var(--text-primary)',
+                width: '28px',
+                height: '28px',
+                borderRadius: '50%',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontWeight: 'bold',
+                zIndex: 10
+              }}
+            >
+              ✕
+            </button>
+            <PrivacyCard />
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Confirmação para Exclusão Completa */}
+      {showDeleteAllModal && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          backgroundColor: 'rgba(5, 8, 22, 0.85)',
+          backdropFilter: 'blur(16px)',
+          WebkitBackdropFilter: 'blur(16px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          padding: '24px',
+          animation: 'fadeIn var(--transition-fast) forwards'
+        }}
+          onClick={() => !deletingAll && setShowDeleteAllModal(false)}
+        >
+          <div style={{
+            backgroundColor: 'var(--bg-secondary)',
+            borderRadius: 'var(--radius-xl)',
+            padding: '28px',
+            border: '1px solid rgba(239, 68, 68, 0.2)',
+            boxShadow: 'var(--shadow-xl)',
+            maxWidth: '420px',
+            width: '100%',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '20px',
+            position: 'relative'
+          }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div>
+              <h4 style={{ margin: '0 0 8px 0', fontSize: '16px', color: 'var(--color-error)', fontWeight: 700 }}>
+                ⚠️ Excluir todos os vídeos?
+              </h4>
+              <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-secondary)', lineHeight: '1.5' }}>
+                Essa ação apagará todos os vídeos enviados desta fila. Essa ação não pode ser desfeita.
+              </p>
+            </div>
+
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button
+                disabled={deletingAll}
+                onClick={() => setShowDeleteAllModal(false)}
+                style={{
+                  flex: 1,
+                  backgroundColor: 'rgba(255,255,255,0.03)',
+                  border: '1px solid var(--border-color)',
+                  color: 'var(--text-primary)',
+                  padding: '11px',
+                  borderRadius: 'var(--radius-md)',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  fontFamily: 'var(--font-secondary)'
+                }}
+              >
+                Cancelar
+              </button>
+              <button
+                disabled={deletingAll}
+                onClick={handleDeleteAllVideos}
+                style={{
+                  flex: 1,
+                  backgroundColor: 'var(--color-error)',
+                  color: 'white',
+                  border: 'none',
+                  padding: '11px',
+                  borderRadius: 'var(--radius-md)',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  fontFamily: 'var(--font-secondary)'
+                }}
+              >
+                {deletingAll ? 'Excluindo...' : 'Sim, excluir tudo'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </Layout>
   );
 };
