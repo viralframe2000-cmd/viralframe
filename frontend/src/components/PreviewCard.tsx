@@ -15,9 +15,9 @@ interface PreviewCardProps {
 }
 
 export const PreviewCard: React.FC<PreviewCardProps> = ({ 
-  povText, 
-  brandName = "Best Promos OFF", 
-  brandHandle = "@bestpromosoff", 
+  povText,
+  brandName = "", 
+  brandHandle = "", 
   logoUrl = null, 
   isVerified = true,
   selectedVideoFilename = null,
