@@ -7,7 +7,22 @@ import { JobProgress } from '../components/JobProgress';
 import { PreviewCard } from '../components/PreviewCard';
 import { PhraseBankUploader } from '../components/PhraseBankUploader';
 import { PrivacyCard } from '../components/PrivacyCard';
-import { listVideos, saveMetadata, renderVideo, renderAll, getJob, deleteVideo, healthCheck, applyRandomPhrases, downloadAllFiles, getProfile, deleteAllVideos } from '../lib/api';
+import { 
+  listVideos, 
+  saveMetadata, 
+  renderVideo, 
+  renderAll, 
+  getJob, 
+  deleteVideo, 
+  healthCheck, 
+  applyRandomPhrases, 
+  getProfile, 
+  deleteAllVideos,
+  clearPhrases,
+  downloadStorageFile,
+  createExportJob,
+  getExportJob
+} from '../lib/api';
 import type { VideoStatus, JobStatus } from '../lib/api';
 import { isSupabaseConfigured } from '../lib/supabase';
 
@@ -24,6 +39,13 @@ export const Dashboard: React.FC = () => {
   const [showPrivacyModal, setShowPrivacyModal] = useState<boolean>(false);
   const [showDeleteAllModal, setShowDeleteAllModal] = useState<boolean>(false);
   const [deletingAll, setDeletingAll] = useState<boolean>(false);
+  
+  // Modais e Estados de Reset e ZIP (Novas Criações)
+  const [showResetModal, setShowResetModal] = useState<boolean>(false);
+  const [resetting, setResetting] = useState<boolean>(false);
+  const [phrasesCountTrigger, setPhrasesCountTrigger] = useState<number>(0);
+  const [zipLoading, setZipLoading] = useState<boolean>(false);
+  const [zipMessage, setZipMessage] = useState<string>("");
 
   const [selectedVideoId, setSelectedVideoId] = useState<string | null>(null);
   const [profile, setProfile] = useState<{
@@ -37,7 +59,6 @@ export const Dashboard: React.FC = () => {
     logoSignedUrl: '',
     verified: true
   });
-  const [downloadStatus, setDownloadStatus] = useState<string | null>(null);
   const [previewMode, setPreviewMode] = useState<"input" | "output">("input");
 
   const handleProfileChange = (newProfile: { display_name: string; handle: string; verified: boolean; logo_path?: string }) => {
@@ -49,25 +70,146 @@ export const Dashboard: React.FC = () => {
     });
   };
 
-  const handleDownloadAll = () => {
-    const readyVideos = videos.filter(v => v.exists_output);
+  const handleDownloadAll = async () => {
+    // Filtra apenas videos com status = rendered e output_storage_path preenchido (Regra 1)
+    const readyVideos = videos.filter(v => v.status === 'rendered' && v.output_storage_path);
+    
     if (readyVideos.length === 0) {
-      alert("Nenhum vídeo pronto para baixar. Gere os vídeos primeiro.");
+      alert("Nenhum vídeo renderizado encontrado para exportação.");
       return;
     }
 
-    setDownloadStatus("Preparando download...");
+    setZipLoading(true);
+    setZipMessage("Iniciando exportação...");
+    
     try {
-      downloadAllFiles('all');
-      setDownloadStatus("Aguardando exportação...");
-      setTimeout(() => {
-        setDownloadStatus(null);
-      }, 4000);
-    } catch (err) {
-      setDownloadStatus("Erro ao iniciar download.");
-      setTimeout(() => {
-        setDownloadStatus(null);
-      }, 4000);
+      const jobId = await createExportJob(readyVideos.length);
+      
+      const poll = setInterval(async () => {
+        try {
+          const job = await getExportJob(jobId);
+          
+          if (job.status === 'queued') {
+            setZipMessage("Aguardando na fila de exportação...");
+          } else if (job.status === 'processing') {
+            setZipMessage(`Compactando arquivos: ${job.processed} de ${job.total} processados...`);
+          } else if (job.status === 'completed' || job.status === 'partial') {
+            clearInterval(poll);
+            setZipLoading(false);
+            
+            if (job.export_storage_path) {
+              setZipMessage("Download iniciado.");
+              
+              await downloadStorageFile({
+                bucket: 'exports',
+                path: job.export_storage_path,
+                filename: 'viralframe-videos.zip'
+              });
+              
+              setTimeout(() => setZipMessage(""), 4000);
+            } else {
+              alert(job.error_message || "Erro desconhecido na geração do ZIP.");
+              setZipMessage("");
+            }
+          } else if (job.status === 'failed') {
+            clearInterval(poll);
+            setZipLoading(false);
+            alert(job.error_message || "Falha ao gerar o ZIP. Tente novamente.");
+            setZipMessage("");
+          }
+        } catch (err: any) {
+          clearInterval(poll);
+          setZipLoading(false);
+          alert(err.message || "Erro no polling de exportação.");
+          setZipMessage("");
+        }
+      }, 3000);
+    } catch (err: any) {
+      setZipLoading(false);
+      alert(err.message || "Erro ao iniciar job de exportação.");
+      setZipMessage("");
+    }
+  };
+
+  const handleDownloadFile = async (videoId: string, type: 'video' | 'caption' | 'cover') => {
+    const video = videos.find(v => v.id === videoId);
+    if (!video) return;
+
+    const baseName = video.filename;
+    // Remove extensão
+    const lastDot = baseName.lastIndexOf('.');
+    const cleanName = lastDot !== -1 ? baseName.substring(0, lastDot) : baseName;
+
+    if (type === 'video') {
+      if (video.output_storage_path) {
+        await downloadStorageFile({
+          bucket: 'rendered-videos',
+          path: video.output_storage_path,
+          filename: `${cleanName}_viralframe.mp4`
+        });
+      } else {
+        throw new Error("Vídeo renderizado não encontrado.");
+      }
+    } else if (type === 'cover') {
+      if (video.cover_storage_path) {
+        await downloadStorageFile({
+          bucket: 'rendered-videos',
+          path: video.cover_storage_path,
+          filename: `${cleanName}_capa.jpg`
+        });
+      } else {
+        throw new Error("Capa do vídeo não encontrada.");
+      }
+    } else if (type === 'caption') {
+      if (video.caption_storage_path) {
+        await downloadStorageFile({
+          bucket: 'rendered-videos',
+          path: video.caption_storage_path,
+          filename: `${cleanName}_legenda.txt`
+        });
+      } else {
+        // Fallback: gera TXT no client-side a partir do texto em memória se o arquivo físico não existir (Regra 6 e Parte 6)
+        const captionText = video.caption_text || metadata[video.filename]?.caption_text || '';
+        const blob = new Blob([captionText], { type: 'text/plain;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${cleanName}_legenda.txt`;
+        document.body.appendChild(a);
+        a.click();
+        
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }
+    }
+  };
+
+  const handleResetCreation = async () => {
+    setResetting(true);
+    try {
+      // 1. Exclui todos os vídeos (registros, user-uploads e rendered-videos) (Regra 7)
+      await deleteAllVideos();
+      
+      // 2. Exclui todas as frases do usuário (Regra 7)
+      await clearPhrases();
+      
+      // 3. Força o PhraseBankUploader a recarregar e mostrar "Nenhuma frase" (Regra 9)
+      setPhrasesCountTrigger(prev => prev + 1);
+      
+      // 4. Limpa seleções de preview (Regra 9)
+      setSelectedVideoId(null);
+      setPreviewMode("input");
+      
+      // 5. Recarrega a fila local (agora vazia) e atualiza a UI (Regra 9)
+      await loadData();
+      
+      alert("Nova criação iniciada! Seus vídeos e frases anteriores foram limpos.");
+      setShowResetModal(false);
+    } catch (err: any) {
+      alert(err.message || "Erro ao iniciar nova criação.");
+    } finally {
+      setResetting(false);
     }
   };
 
@@ -290,6 +432,56 @@ export const Dashboard: React.FC = () => {
     <Layout>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '30px' }}>
         
+        {/* Cabeçalho de Conteúdo com Ação Global (Nova Criação) (Parte 4) */}
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          borderBottom: '1px solid var(--border-color)',
+          paddingBottom: '16px',
+          flexWrap: 'wrap',
+          gap: '12px'
+        }}>
+          <div>
+            <h2 style={{ margin: 0, fontSize: '24px', fontWeight: 800, fontFamily: 'var(--font-primary)', letterSpacing: '-0.5px' }}>
+              Dashboard Principal
+            </h2>
+            <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: 'var(--text-secondary)' }}>
+              Crie e edite seus vídeos em lote
+            </p>
+          </div>
+          
+          <button
+            onClick={() => setShowResetModal(true)}
+            disabled={isUploading}
+            style={{
+              background: 'var(--gradient-cyan-blue)',
+              color: 'white',
+              border: 'none',
+              padding: '10px 20px',
+              borderRadius: 'var(--radius-md)',
+              fontSize: '13px',
+              fontWeight: 700,
+              cursor: isUploading ? 'not-allowed' : 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
+              fontFamily: 'var(--font-secondary)',
+              transition: 'opacity var(--transition-fast), transform var(--transition-fast)',
+              boxShadow: '0 0 16px rgba(59, 130, 246, 0.3)',
+              opacity: isUploading ? 0.5 : 1
+            }}
+            onMouseEnter={e => {
+              if (!isUploading) e.currentTarget.style.opacity = '0.9';
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.opacity = '1';
+            }}
+          >
+            ✨ Nova criação
+          </button>
+        </div>
+        
         {/* Supabase connection missing warning banner */}
         {!isSupabaseConfigured && (
           <div style={{
@@ -342,7 +534,11 @@ export const Dashboard: React.FC = () => {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
             <ProfileSettings onProfileChange={handleProfileChange} />
             <VideoUploader onUploadSuccess={loadData} setIsDashboardUploading={setIsUploading} />
-            <PhraseBankUploader onApplySuccess={handleApplyPhrasesSuccess} />
+            <PhraseBankUploader 
+              onApplySuccess={handleApplyPhrasesSuccess} 
+              phrasesCountTrigger={phrasesCountTrigger}
+              onPhrasesCleared={() => setPhrasesCountTrigger(prev => prev + 1)}
+            />
             
             <button
               onClick={() => setShowPrivacyModal(true)}
@@ -404,7 +600,7 @@ export const Dashboard: React.FC = () => {
               <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 700, fontFamily: 'var(--font-primary)' }}>
                 Fila de Edição
               </h3>
-              {downloadStatus && (
+              {zipMessage && (
                 <span style={{
                   fontSize: '12px',
                   fontWeight: 500,
@@ -417,7 +613,7 @@ export const Dashboard: React.FC = () => {
                   alignItems: 'center',
                   gap: '6px'
                 }}>
-                  🔄 {downloadStatus}
+                  🔄 {zipMessage}
                 </span>
               )}
             </div>
@@ -427,12 +623,12 @@ export const Dashboard: React.FC = () => {
               {/* Baixar Tudo ZIP */}
               <button
                 onClick={handleDownloadAll}
-                disabled={videos.length === 0 || isUploading}
+                disabled={videos.length === 0 || isUploading || zipLoading}
                 style={topButtonStyle}
                 onMouseEnter={handleButtonMouseEnter}
                 onMouseLeave={handleButtonMouseLeave}
               >
-                📦 Baixar Tudo ZIP
+                {zipLoading ? '📦 Preparando...' : '📦 Baixar Tudo ZIP'}
               </button>
 
               {/* Botão aplicar aleatórias */}
@@ -554,6 +750,7 @@ export const Dashboard: React.FC = () => {
               onMetadataChange={handleMetadataChange}
               onRender={handleRenderSingle}
               onDelete={handleDelete}
+              onDownloadFile={handleDownloadFile}
               processingVideos={processingVideos}
               selectedVideoId={selectedVideoId}
               onSelectVideo={(id) => {
@@ -696,6 +893,88 @@ export const Dashboard: React.FC = () => {
                 }}
               >
                 {deletingAll ? 'Excluindo...' : 'Sim, excluir tudo'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Confirmação para Nova Criação (Reset) (Parte 4) */}
+      {showResetModal && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          backgroundColor: 'rgba(5, 8, 22, 0.85)',
+          backdropFilter: 'blur(16px)',
+          WebkitBackdropFilter: 'blur(16px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          padding: '24px',
+          animation: 'fadeIn var(--transition-fast) forwards'
+        }}
+          onClick={() => !resetting && setShowResetModal(false)}
+        >
+          <div style={{
+            backgroundColor: 'var(--bg-secondary)',
+            borderRadius: 'var(--radius-xl)',
+            padding: '28px',
+            border: '1px solid rgba(239, 68, 68, 0.2)',
+            boxShadow: 'var(--shadow-xl)',
+            maxWidth: '420px',
+            width: '100%',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '20px',
+            position: 'relative'
+          }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div>
+              <h4 style={{ margin: '0 0 8px 0', fontSize: '16px', color: 'var(--color-error)', fontWeight: 700 }}>
+                ✨ Iniciar nova criação?
+              </h4>
+              <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-secondary)', lineHeight: '1.5' }}>
+                Isso removerá os vídeos da fila e limpará o banco de frases atual. Seu perfil, logo e conta serão mantidos.
+              </p>
+            </div>
+            
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setShowResetModal(false)}
+                disabled={resetting}
+                style={{
+                  background: 'rgba(255, 255, 255, 0.04)',
+                  border: '1px solid var(--border-color)',
+                  color: 'var(--text-primary)',
+                  padding: '8px 16px',
+                  borderRadius: '8px',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  cursor: resetting ? 'not-allowed' : 'pointer',
+                  fontFamily: 'var(--font-secondary)'
+                }}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleResetCreation}
+                disabled={resetting}
+                style={{
+                  background: 'var(--color-error)',
+                  border: 'none',
+                  color: 'white',
+                  padding: '8px 16px',
+                  borderRadius: '8px',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  cursor: resetting ? 'not-allowed' : 'pointer',
+                  boxShadow: '0 0 12px rgba(239, 68, 68, 0.25)',
+                  fontFamily: 'var(--font-secondary)'
+                }}
+              >
+                {resetting ? 'Resetando...' : 'Criar novo'}
               </button>
             </div>
           </div>

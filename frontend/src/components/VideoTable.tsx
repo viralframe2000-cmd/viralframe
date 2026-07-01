@@ -7,6 +7,7 @@ interface VideoTableProps {
   onMetadataChange: (filename: string, field: 'pov_text' | 'caption_text', value: string) => void;
   onRender: (id: string) => void;
   onDelete: (id: string) => void;
+  onDownloadFile: (id: string, type: 'video' | 'caption' | 'cover') => Promise<void>;
   processingVideos: string[];
   selectedVideoId: string | null;
   onSelectVideo: (id: string) => void;
@@ -19,12 +20,27 @@ export const VideoTable: React.FC<VideoTableProps> = ({
   onMetadataChange,
   onRender,
   onDelete,
+  onDownloadFile,
   processingVideos,
   selectedVideoId,
   onSelectVideo,
   isUploading = false
 }) => {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [downloading, setDownloading] = useState<{[key: string]: boolean}>({});
+
+  const handleDownloadClick = async (videoId: string, type: 'video' | 'caption' | 'cover') => {
+    const key = `${videoId}_${type}`;
+    setDownloading(prev => ({ ...prev, [key]: true }));
+    try {
+      await onDownloadFile(videoId, type);
+    } catch (err) {
+      console.error("Erro ao baixar arquivo:", err);
+      alert(`Não foi possível baixar o ${type === 'video' ? 'vídeo' : type === 'caption' ? 'arquivo de legenda' : 'arquivo de capa'}. Tente novamente.`);
+    } finally {
+      setDownloading(prev => ({ ...prev, [key]: false }));
+    }
+  };
 
   useEffect(() => {
     const handleResize = () => {
@@ -267,47 +283,77 @@ export const VideoTable: React.FC<VideoTableProps> = ({
                 </button>
                 
                 {video.exists_output && (
-                  <div style={{ display: 'flex', gap: '6px', width: '100%', marginTop: '4px' }}>
-                    <a
-                      href={video.video_url || '#'}
-                      download
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', width: '100%', marginTop: '4px' }}>
+                    <button
+                      onClick={() => video.id && handleDownloadClick(video.id, 'video')}
+                      disabled={downloading[`${video.id}_video`]}
                       style={{
                         background: 'rgba(255, 255, 255, 0.04)',
                         border: '1px solid var(--border-color)',
                         color: 'var(--text-primary)',
-                        padding: '6px 10px',
+                        padding: '6px 8px',
                         borderRadius: '8px',
-                        textDecoration: 'none',
                         fontSize: '11px',
                         fontWeight: 600,
                         flex: 1,
-                        textAlign: 'center',
-                        display: 'block'
+                        cursor: downloading[`${video.id}_video`] ? 'not-allowed' : 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '4px'
                       }}
                     >
-                      🎥 Vídeo
-                    </a>
-                    <a
-                      href={video.caption_url || '#'}
-                      download
+                      {downloading[`${video.id}_video`] ? '⏳' : '🎥'} Vídeo
+                    </button>
+                    
+                    <button
+                      onClick={() => video.id && handleDownloadClick(video.id, 'caption')}
+                      disabled={downloading[`${video.id}_caption`]}
                       style={{
                         background: 'rgba(255, 255, 255, 0.04)',
                         border: '1px solid var(--border-color)',
                         color: 'var(--text-primary)',
-                        padding: '6px 10px',
+                        padding: '6px 8px',
                         borderRadius: '8px',
-                        textDecoration: 'none',
                         fontSize: '11px',
                         fontWeight: 600,
                         flex: 1,
-                        textAlign: 'center',
-                        display: 'block'
+                        cursor: downloading[`${video.id}_caption`] ? 'not-allowed' : 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '4px'
                       }}
                     >
-                      📝 Legenda
-                    </a>
+                      {downloading[`${video.id}_caption`] ? '⏳' : '📝'} Legenda
+                    </button>
+
+                    {video.cover_storage_path && (
+                      <button
+                        onClick={() => video.id && handleDownloadClick(video.id, 'cover')}
+                        disabled={downloading[`${video.id}_cover`]}
+                        style={{
+                          background: 'rgba(255, 255, 255, 0.04)',
+                          border: '1px solid var(--border-color)',
+                          color: 'var(--text-primary)',
+                          padding: '6px 8px',
+                          borderRadius: '8px',
+                          fontSize: '11px',
+                          fontWeight: 600,
+                          flex: 1,
+                          cursor: downloading[`${video.id}_cover`] ? 'not-allowed' : 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '4px'
+                        }}
+                      >
+                        {downloading[`${video.id}_cover`] ? '⏳' : '🖼️'} Capa
+                      </button>
+                    )}
                   </div>
                 )}
+              </div>
                 
                 <button
                   onClick={() => video.id && onDelete(video.id)}
@@ -329,7 +375,6 @@ export const VideoTable: React.FC<VideoTableProps> = ({
                   Excluir Vídeo
                 </button>
               </div>
-            </div>
           );
         })}
       </div>
@@ -511,9 +556,9 @@ export const VideoTable: React.FC<VideoTableProps> = ({
                       
                       {video.exists_output && (
                         <>
-                          <a
-                            href={video.video_url || '#'}
-                            download
+                          <button
+                            onClick={() => video.id && handleDownloadClick(video.id, 'video')}
+                            disabled={downloading[`${video.id}_video`]}
                             title="Baixar Vídeo"
                             style={{
                               background: 'rgba(255, 255, 255, 0.04)',
@@ -521,26 +566,27 @@ export const VideoTable: React.FC<VideoTableProps> = ({
                               color: 'var(--text-primary)',
                               padding: '6px 10px',
                               borderRadius: '8px',
-                              textDecoration: 'none',
                               fontSize: '11px',
                               fontWeight: 600,
                               display: 'flex',
                               alignItems: 'center',
                               gap: '4px',
+                              cursor: downloading[`${video.id}_video`] ? 'not-allowed' : 'pointer',
                               transition: 'all 0.2s'
                             }}
                             onMouseEnter={e => {
-                              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
+                              if (!downloading[`${video.id}_video`]) e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
                             }}
                             onMouseLeave={e => {
-                              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.04)';
+                              if (!downloading[`${video.id}_video`]) e.currentTarget.style.background = 'rgba(255, 255, 255, 0.04)';
                             }}
                           >
-                            🎥 Vídeo
-                          </a>
-                          <a
-                            href={video.caption_url || '#'}
-                            download
+                            {downloading[`${video.id}_video`] ? '⏳' : '🎥'} Vídeo
+                          </button>
+                          
+                          <button
+                            onClick={() => video.id && handleDownloadClick(video.id, 'caption')}
+                            disabled={downloading[`${video.id}_caption`]}
                             title="Baixar Legenda"
                             style={{
                               background: 'rgba(255, 255, 255, 0.04)',
@@ -548,23 +594,53 @@ export const VideoTable: React.FC<VideoTableProps> = ({
                               color: 'var(--text-primary)',
                               padding: '6px 10px',
                               borderRadius: '8px',
-                              textDecoration: 'none',
                               fontSize: '11px',
                               fontWeight: 600,
                               display: 'flex',
                               alignItems: 'center',
                               gap: '4px',
+                              cursor: downloading[`${video.id}_caption`] ? 'not-allowed' : 'pointer',
                               transition: 'all 0.2s'
                             }}
                             onMouseEnter={e => {
-                              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
+                              if (!downloading[`${video.id}_caption`]) e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
                             }}
                             onMouseLeave={e => {
-                              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.04)';
+                              if (!downloading[`${video.id}_caption`]) e.currentTarget.style.background = 'rgba(255, 255, 255, 0.04)';
                             }}
                           >
-                            📝 Legenda
-                          </a>
+                            {downloading[`${video.id}_caption`] ? '⏳' : '📝'} Legenda
+                          </button>
+
+                          {video.cover_storage_path && (
+                            <button
+                              onClick={() => video.id && handleDownloadClick(video.id, 'cover')}
+                              disabled={downloading[`${video.id}_cover`]}
+                              title="Baixar Capa"
+                              style={{
+                                background: 'rgba(255, 255, 255, 0.04)',
+                                border: '1px solid var(--border-color)',
+                                color: 'var(--text-primary)',
+                                padding: '6px 10px',
+                                borderRadius: '8px',
+                                fontSize: '11px',
+                                fontWeight: 600,
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                cursor: downloading[`${video.id}_cover`] ? 'not-allowed' : 'pointer',
+                                transition: 'all 0.2s'
+                              }}
+                              onMouseEnter={e => {
+                                if (!downloading[`${video.id}_cover`]) e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
+                              }}
+                              onMouseLeave={e => {
+                                if (!downloading[`${video.id}_cover`]) e.currentTarget.style.background = 'rgba(255, 255, 255, 0.04)';
+                              }}
+                            >
+                              {downloading[`${video.id}_cover`] ? '⏳' : '🖼️'} Capa
+                            </button>
+                          )}
                         </>
                       )}
                       

@@ -334,3 +334,27 @@ export function downloadPhraseTemplate() {
   link.click();
   document.body.removeChild(link);
 }
+
+/**
+ * Limpa todas as frases do usuário autenticado atual na tabela phrases.
+ */
+export async function clearPhrases(): Promise<void> {
+  try {
+    const user = await getCurrentUser();
+    
+    const { error } = await supabase
+      .from('phrases')
+      .delete()
+      .eq('user_id', user.id);
+      
+    if (error) {
+      return handleSupabaseError(error, 'Não foi possível limpar as frases no banco de dados.');
+    }
+  } catch (err: any) {
+    console.error('Erro em clearPhrases:', err);
+    if (err.message && (err.message.includes('permissão') || err.message.includes('sessão'))) {
+      throw err;
+    }
+    throw new Error(err.message || 'Falha ao limpar frases.');
+  }
+}

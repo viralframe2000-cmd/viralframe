@@ -17,6 +17,9 @@ export interface VideoStatus {
   input_signed_url?: string | null;
   output_signed_url?: string | null;
   has_output: boolean;
+  output_storage_path?: string | null;
+  cover_storage_path?: string | null;
+  caption_storage_path?: string | null;
 }
 
 /**
@@ -256,7 +259,10 @@ export async function listVideos(): Promise<VideoStatus[]> {
         output_preview_url: outputPreviewUrl,
         input_signed_url: inputPreviewUrl,
         output_signed_url: outputPreviewUrl,
-        has_output: isPronto && !!video.output_storage_path
+        has_output: isPronto && !!video.output_storage_path,
+        output_storage_path: video.output_storage_path || null,
+        cover_storage_path: video.cover_storage_path || null,
+        caption_storage_path: video.caption_storage_path || null
       });
     }
 

@@ -1,13 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { uploadPhrases, listPhrases, applyRandomPhrases } from '../lib/api';
+import { uploadPhrases, listPhrases, applyRandomPhrases, clearPhrases } from '../lib/api';
 import { downloadPhraseTemplate } from '../lib/phrases';
 import type { VideoStatus } from '../lib/api';
 
 interface PhraseBankUploaderProps {
   onApplySuccess: (updatedVideos: VideoStatus[]) => void;
+  phrasesCountTrigger?: number;
+  onPhrasesCleared?: () => void;
 }
 
-export const PhraseBankUploader: React.FC<PhraseBankUploaderProps> = ({ onApplySuccess }) => {
+export const PhraseBankUploader: React.FC<PhraseBankUploaderProps> = ({ 
+  onApplySuccess,
+  phrasesCountTrigger = 0,
+  onPhrasesCleared
+}) => {
   const [totalPhrases, setTotalPhrases] = useState<number>(0);
   const [activePhrases, setActivePhrases] = useState<number>(0);
   const [uploading, setUploading] = useState(false);
@@ -15,6 +21,10 @@ export const PhraseBankUploader: React.FC<PhraseBankUploaderProps> = ({ onApplyS
   const [overwrite, setOverwrite] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  
+  // Estados para limpeza de frases (Regra 8 e Parte 3)
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [clearing, setClearing] = useState(false);
 
   const fetchPhrasesInfo = async () => {
     try {
@@ -28,7 +38,7 @@ export const PhraseBankUploader: React.FC<PhraseBankUploaderProps> = ({ onApplyS
 
   useEffect(() => {
     fetchPhrasesInfo();
-  }, []);
+  }, [phrasesCountTrigger]);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -74,6 +84,28 @@ export const PhraseBankUploader: React.FC<PhraseBankUploaderProps> = ({ onApplyS
     }
   };
 
+  const handleClearPhrases = async () => {
+    setClearing(true);
+    setError(null);
+    setSuccessMsg(null);
+    try {
+      await clearPhrases();
+      setTotalPhrases(0);
+      setActivePhrases(0);
+      setSuccessMsg("Banco de frases limpo com sucesso!");
+      setShowClearConfirm(false);
+      
+      // Notifica o pai Dashboard de que as frases foram limpas para resetar qualquer dependência (Regra 9)
+      if (onPhrasesCleared) {
+        onPhrasesCleared();
+      }
+    } catch (err: any) {
+      setError(err.message || "Erro ao limpar frases.");
+    } finally {
+      setClearing(false);
+    }
+  };
+
   return (
     <div style={{
       backgroundColor: 'var(--bg-secondary)',
@@ -87,10 +119,37 @@ export const PhraseBankUploader: React.FC<PhraseBankUploaderProps> = ({ onApplyS
       backdropFilter: 'var(--blur-sm)',
       WebkitBackdropFilter: 'var(--blur-sm)'
     }}>
-      <div>
-        <h4 style={{ margin: '0 0 6px 0', fontSize: '15px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-primary)' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '0 0 6px 0', flexWrap: 'wrap', gap: '8px' }}>
+        <h4 style={{ margin: 0, fontSize: '15px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-primary)' }}>
           <span style={{ fontSize: '18px' }}>📚</span> Banco de Frases
         </h4>
+        {totalPhrases > 0 && (
+          <button
+            onClick={() => setShowClearConfirm(true)}
+            style={{
+              background: 'transparent',
+              border: 'none',
+              color: 'var(--color-error)',
+              fontSize: '11px',
+              fontWeight: 600,
+              cursor: 'pointer',
+              padding: '2px 6px',
+              borderRadius: '4px',
+              fontFamily: 'var(--font-secondary)',
+              transition: 'all var(--transition-fast)'
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.background = 'rgba(239, 68, 68, 0.08)';
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.background = 'transparent';
+            }}
+          >
+            🧹 Limpar Frases
+          </button>
+        )}
+      </div>
+      <div>
         <p style={{ margin: '0', fontSize: '12px', color: 'var(--text-secondary)', lineHeight: '1.5' }}>
           Suba um arquivo com POVs e legendas para preencher seus vídeos automaticamente.
         </p>
@@ -260,6 +319,89 @@ export const PhraseBankUploader: React.FC<PhraseBankUploaderProps> = ({ onApplyS
       <p style={{ margin: '0', fontSize: '11px', color: 'var(--text-muted)', fontStyle: 'italic', textAlign: 'center' }}>
         * O POV aparece no vídeo. A legenda vai para o post do Instagram.
       </p>
+
+      {/* Modal de Confirmação para Limpeza de Frases (Parte 3) */}
+      {showClearConfirm && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          backgroundColor: 'rgba(5, 8, 22, 0.85)',
+          backdropFilter: 'blur(16px)',
+          WebkitBackdropFilter: 'blur(16px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          padding: '24px',
+          animation: 'fadeIn var(--transition-fast) forwards'
+        }}
+          onClick={() => !clearing && setShowClearConfirm(false)}
+        >
+          <div style={{
+            backgroundColor: 'var(--bg-secondary)',
+            borderRadius: 'var(--radius-xl)',
+            padding: '28px',
+            border: '1px solid rgba(239, 68, 68, 0.2)',
+            boxShadow: 'var(--shadow-xl)',
+            maxWidth: '420px',
+            width: '100%',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '20px',
+            position: 'relative'
+          }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div>
+              <h4 style={{ margin: '0 0 8px 0', fontSize: '16px', color: 'var(--color-error)', fontWeight: 700, fontFamily: 'var(--font-primary)' }}>
+                🧹 Limpar banco de frases?
+              </h4>
+              <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-secondary)', lineHeight: '1.5' }}>
+                Isso removerá todas as frases carregadas neste banco. Você poderá enviar outro CSV em seguida.
+              </p>
+            </div>
+            
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setShowClearConfirm(false)}
+                disabled={clearing}
+                style={{
+                  background: 'rgba(255, 255, 255, 0.04)',
+                  border: '1px solid var(--border-color)',
+                  color: 'var(--text-primary)',
+                  padding: '8px 16px',
+                  borderRadius: '8px',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  cursor: clearing ? 'not-allowed' : 'pointer',
+                  fontFamily: 'var(--font-secondary)'
+                }}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleClearPhrases}
+                disabled={clearing}
+                style={{
+                  background: 'var(--color-error)',
+                  border: 'none',
+                  color: 'white',
+                  padding: '8px 16px',
+                  borderRadius: '8px',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  cursor: clearing ? 'not-allowed' : 'pointer',
+                  boxShadow: '0 0 12px rgba(239, 68, 68, 0.25)',
+                  fontFamily: 'var(--font-secondary)'
+                }}
+              >
+                {clearing ? 'Limpando...' : 'Limpar frases'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };
