@@ -131,29 +131,31 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({ onProfileChang
   return (
     <div style={{
       backgroundColor: 'var(--bg-secondary)',
-      borderRadius: 'var(--border-radius-lg)',
+      borderRadius: 'var(--radius-xl)',
       padding: '24px',
-      boxShadow: 'var(--shadow-sm)',
+      boxShadow: 'var(--shadow-md)',
       border: '1px solid var(--border-color)',
       display: 'flex',
       flexDirection: 'column',
-      gap: '16px'
+      gap: '20px',
+      backdropFilter: 'var(--blur-sm)',
+      WebkitBackdropFilter: 'var(--blur-sm)'
     }}>
       <div>
-        <h4 style={{ margin: '0 0 4px 0', fontSize: '14px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <span>👤</span> Informações do Perfil
+        <h4 style={{ margin: '0 0 6px 0', fontSize: '15px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-primary)' }}>
+          <span style={{ fontSize: '18px' }}>👤</span> Informações do Perfil
         </h4>
-        <p style={{ margin: '0', fontSize: '12px', color: 'var(--text-secondary)', lineHeight: '1.4' }}>
+        <p style={{ margin: '0', fontSize: '12px', color: 'var(--text-secondary)', lineHeight: '1.5' }}>
           Essas informações aparecerão no topo do vídeo final.
         </p>
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: '16px', borderBottom: '1px solid var(--border-color)', paddingBottom: '14px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '16px', borderBottom: '1px solid var(--border-color)', paddingBottom: '16px' }}>
         <div style={{
           width: '56px',
           height: '56px',
           borderRadius: '50%',
-          backgroundColor: '#f1f5f9',
+          backgroundColor: 'rgba(255,255,255,0.05)',
           border: '1px solid var(--border-color)',
           display: 'flex',
           alignItems: 'center',
@@ -175,59 +177,101 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({ onProfileChang
           />
         </div>
         
-        <div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
           <label style={{
-            backgroundColor: 'white',
+            background: 'rgba(255, 255, 255, 0.05)',
             border: '1px solid var(--border-color)',
-            padding: '6px 12px',
-            borderRadius: 'var(--border-radius-md)',
+            color: 'var(--text-primary)',
+            padding: '6px 14px',
+            borderRadius: 'var(--radius-md)',
             fontSize: '12px',
             fontWeight: 600,
             cursor: 'pointer',
-            display: 'inline-block'
-          }}>
-            {uploading ? 'Enviando...' : 'Escolher Logo'}
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '6px',
+            transition: 'background var(--transition-fast), border-color var(--transition-fast)'
+          }}
+            onMouseEnter={e => {
+              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
+              e.currentTarget.style.borderColor = 'var(--border-hover)';
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
+              e.currentTarget.style.borderColor = 'var(--border-color)';
+            }}
+          >
+            {uploading ? 'Enviando...' : '📷 Escolher Logo'}
             <input type="file" accept=".png,.jpg,.jpeg" style={{ display: 'none' }} onChange={handleLogoChange} disabled={uploading} />
           </label>
-          <div style={{ fontSize: '10px', color: 'var(--text-secondary)', marginTop: '4px' }}>
+          <div style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
             PNG ou JPG circular.
           </div>
         </div>
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-          <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-secondary)' }}>Nome exibido</label>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)' }}>Nome exibido</label>
           <input 
             type="text" 
             value={displayName}
             onChange={(e) => handleFieldChange('display_name', e.target.value)}
             placeholder="Coloque seu nome de exibição aqui"
+            className="input-dark"
             style={{
-              width: '100%',
-              padding: '8px 12px',
-              border: '1px solid var(--border-color)',
-              borderRadius: 'var(--border-radius-md)',
+              background: 'rgba(255,255,255,0.05)',
+              border: '1px solid rgba(255,255,255,0.08)',
+              color: 'var(--text-primary)',
+              borderRadius: '10px',
+              padding: '10px 14px',
               fontSize: '13px',
-              outline: 'none'
+              outline: 'none',
+              width: '100%',
+              fontFamily: 'var(--font-secondary)',
+              transition: 'border-color 0.2s, box-shadow 0.2s, background 0.2s',
+            }}
+            onFocus={e => {
+              e.target.style.borderColor = 'rgba(59,130,246,0.6)';
+              e.target.style.boxShadow = '0 0 0 3px rgba(59,130,246,0.15)';
+              e.target.style.background = 'rgba(255,255,255,0.08)';
+            }}
+            onBlur={e => {
+              e.target.style.borderColor = 'rgba(255,255,255,0.08)';
+              e.target.style.boxShadow = 'none';
+              e.target.style.background = 'rgba(255,255,255,0.05)';
             }}
           />
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-          <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-secondary)' }}>@ do perfil</label>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)' }}>@ do perfil</label>
           <input 
             type="text" 
             value={handle}
             onChange={(e) => handleFieldChange('handle', e.target.value)}
             placeholder="Coloque seu @ do Instagram aqui"
             style={{
-              width: '100%',
-              padding: '8px 12px',
-              border: '1px solid var(--border-color)',
-              borderRadius: 'var(--border-radius-md)',
+              background: 'rgba(255,255,255,0.05)',
+              border: '1px solid rgba(255,255,255,0.08)',
+              color: 'var(--text-primary)',
+              borderRadius: '10px',
+              padding: '10px 14px',
               fontSize: '13px',
-              outline: 'none'
+              outline: 'none',
+              width: '100%',
+              fontFamily: 'var(--font-secondary)',
+              transition: 'border-color 0.2s, box-shadow 0.2s, background 0.2s',
+            }}
+            onFocus={e => {
+              e.target.style.borderColor = 'rgba(59,130,246,0.6)';
+              e.target.style.boxShadow = '0 0 0 3px rgba(59,130,246,0.15)';
+              e.target.style.background = 'rgba(255,255,255,0.08)';
+            }}
+            onBlur={e => {
+              e.target.style.borderColor = 'rgba(255,255,255,0.08)';
+              e.target.style.boxShadow = 'none';
+              e.target.style.background = 'rgba(255,255,255,0.05)';
             }}
           />
         </div>
@@ -238,15 +282,28 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({ onProfileChang
             disabled={saving || !displayName.trim() || !handle.trim()}
             style={{
               flex: 1,
-              backgroundColor: 'var(--accent-blue)',
+              background: 'var(--gradient-cyan-blue)',
               color: 'white',
               border: 'none',
-              padding: '10px',
-              borderRadius: 'var(--border-radius-md)',
+              padding: '11px',
+              borderRadius: 'var(--radius-md)',
               fontSize: '13px',
               fontWeight: 600,
               cursor: 'pointer',
-              opacity: (saving || !displayName.trim() || !handle.trim()) ? 0.6 : 1
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px',
+              transition: 'opacity var(--transition-fast), transform var(--transition-fast)',
+              opacity: (saving || !displayName.trim() || !handle.trim()) ? 0.5 : 1
+            }}
+            onMouseEnter={e => {
+              if (!(saving || !displayName.trim() || !handle.trim())) {
+                e.currentTarget.style.transform = 'translateY(-1px)';
+              }
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.transform = 'translateY(0)';
             }}
           >
             {saving ? 'Salvando...' : '💾 Salvar Perfil'}
@@ -257,15 +314,30 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({ onProfileChang
             disabled={saving || (!displayName && !handle)}
             style={{
               flex: 1,
-              backgroundColor: 'white',
-              border: '1px solid #ef4444',
-              color: '#ef4444',
-              padding: '10px',
-              borderRadius: 'var(--border-radius-md)',
+              backgroundColor: 'transparent',
+              border: '1px solid rgba(239, 68, 68, 0.3)',
+              color: 'var(--color-error)',
+              padding: '11px',
+              borderRadius: 'var(--radius-md)',
               fontSize: '13px',
               fontWeight: 600,
               cursor: 'pointer',
-              opacity: (saving || (!displayName && !handle)) ? 0.6 : 1
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px',
+              transition: 'background var(--transition-fast), border-color var(--transition-fast)',
+              opacity: (saving || (!displayName && !handle)) ? 0.5 : 1
+            }}
+            onMouseEnter={e => {
+              if (!(saving || (!displayName && !handle))) {
+                e.currentTarget.style.backgroundColor = 'var(--color-error-bg)';
+                e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.5)';
+              }
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.backgroundColor = 'transparent';
+              e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.3)';
             }}
           >
             🗑️ Limpar Perfil
@@ -274,12 +346,12 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({ onProfileChang
       </div>
 
       {error && (
-        <div style={{ color: '#ef4444', fontSize: '11px', backgroundColor: '#fef2f2', padding: '8px 12px', borderRadius: 'var(--border-radius-md)', border: '1px solid #fca5a5' }}>
+        <div style={{ color: 'var(--color-error)', fontSize: '12px', backgroundColor: 'var(--color-error-bg)', padding: '10px 14px', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-error-border)', display: 'flex', alignItems: 'center', gap: '8px' }}>
           ⚠️ {error}
         </div>
       )}
       {successMsg && (
-        <div style={{ color: '#059669', fontSize: '11px', backgroundColor: '#ecfdf5', padding: '8px 12px', borderRadius: 'var(--border-radius-md)', border: '1px solid #a7f3d0' }}>
+        <div style={{ color: 'var(--color-success)', fontSize: '12px', backgroundColor: 'var(--color-success-bg)', padding: '10px 14px', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-success-border)', display: 'flex', alignItems: 'center', gap: '8px' }}>
           ✅ {successMsg}
         </div>
       )}

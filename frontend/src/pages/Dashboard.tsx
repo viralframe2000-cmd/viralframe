@@ -62,7 +62,6 @@ export const Dashboard: React.FC = () => {
     }
   };
 
-  // Carrega vídeos e suas frases no load inicial
   const loadData = async () => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -70,7 +69,6 @@ export const Dashboard: React.FC = () => {
         setAuthToken(session.access_token);
       }
 
-      // Verifica FFmpeg
       const health = await healthCheck();
       setFfmpegInstalled(health.ffmpeg_installed);
 
@@ -113,7 +111,6 @@ export const Dashboard: React.FC = () => {
     setMetadata(prev => ({ ...prev, ...newMeta }));
   };
 
-  // Polling do Job ativo a cada 2 segundos
   useEffect(() => {
     let timer: any;
     if (activeJob && activeJob.status !== 'completed' && activeJob.status !== 'failed') {
@@ -122,7 +119,7 @@ export const Dashboard: React.FC = () => {
           const status = await getJob(activeJob.job_id);
           setActiveJob(status);
           if (status.status === 'completed' || status.status === 'failed') {
-            loadData(); // recarrega a tabela de vídeos quando terminar
+            loadData();
           }
         } catch (err) {
           console.error("Erro no polling do job:", err);
@@ -164,7 +161,6 @@ export const Dashboard: React.FC = () => {
       return;
     }
 
-    // Primeiro salva as edições pendentes
     await handleSaveMetadata();
     
     setProcessingVideos(prev => [...prev, filename]);
@@ -184,7 +180,6 @@ export const Dashboard: React.FC = () => {
       return;
     }
 
-    // Primeiro salva as edições pendentes
     await handleSaveMetadata();
     
     try {
@@ -218,17 +213,44 @@ export const Dashboard: React.FC = () => {
     ? metadata[selectedVideoFilename].pov_text
     : (selectedVideo?.pov_text || '');
 
+  const topButtonStyle: React.CSSProperties = {
+    background: 'rgba(255, 255, 255, 0.04)',
+    border: '1px solid var(--border-color)',
+    color: 'var(--text-primary)',
+    padding: '8px 16px',
+    borderRadius: 'var(--radius-md)',
+    fontSize: '13px',
+    fontWeight: 600,
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px',
+    fontFamily: 'var(--font-secondary)',
+    transition: 'all var(--transition-fast)'
+  };
+
+  const handleButtonMouseEnter = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
+    e.currentTarget.style.borderColor = 'var(--border-hover)';
+  };
+
+  const handleButtonMouseLeave = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.04)';
+    e.currentTarget.style.borderColor = 'var(--border-color)';
+  };
+
   return (
     <Layout>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '30px' }}>
         
+        {/* FFmpeg banner error */}
         {!ffmpegInstalled && (
           <div style={{
-            backgroundColor: '#fffbeb',
-            border: '1px solid #fef3c7',
-            color: '#b45309',
+            backgroundColor: 'var(--color-warning-bg)',
+            border: '1px solid var(--color-warning-border)',
+            color: 'var(--color-warning)',
             padding: '16px 20px',
-            borderRadius: 'var(--border-radius-lg)',
+            borderRadius: 'var(--radius-lg)',
             fontSize: '13px',
             fontWeight: 500,
             lineHeight: '1.5',
@@ -247,7 +269,7 @@ export const Dashboard: React.FC = () => {
         
         {/* Painel Superior Grid */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '24px' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
             <ProfileSettings onProfileChange={handleProfileChange} />
             <VideoUploader onUploadSuccess={loadData} />
             <PhraseBankUploader onApplySuccess={handleApplyPhrasesSuccess} />
@@ -273,21 +295,25 @@ export const Dashboard: React.FC = () => {
         <JobProgress job={activeJob} />
 
         {/* Tabela de Controle de Lotes */}
-        <div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <div style={{
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
-            marginBottom: '15px'
+            flexWrap: 'wrap',
+            gap: '12px'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600 }}>Fila de Edição</h3>
+              <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 700, fontFamily: 'var(--font-primary)' }}>
+                Fila de Edição
+              </h3>
               {downloadStatus && (
                 <span style={{
                   fontSize: '12px',
                   fontWeight: 500,
-                  color: 'var(--accent-blue)',
-                  backgroundColor: '#eff6ff',
+                  color: 'var(--accent-cyan)',
+                  backgroundColor: 'rgba(34, 211, 238, 0.12)',
+                  border: '1px solid rgba(34, 211, 238, 0.2)',
                   padding: '4px 10px',
                   borderRadius: '12px',
                   display: 'inline-flex',
@@ -299,25 +325,16 @@ export const Dashboard: React.FC = () => {
               )}
             </div>
             
-            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+            <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+              
+              {/* Dropdown Baixar Tudo */}
               <div style={{ position: 'relative' }}>
                 <button
                   onClick={() => setShowDownloadDropdown(!showDownloadDropdown)}
                   disabled={videos.length === 0}
-                  style={{
-                    backgroundColor: 'white',
-                    border: '1px solid var(--border-color)',
-                    color: 'var(--text-primary)',
-                    padding: '8px 16px',
-                    borderRadius: 'var(--border-radius-md)',
-                    fontSize: '13px',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    opacity: videos.length === 0 ? 0.6 : 1,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px'
-                  }}
+                  style={topButtonStyle}
+                  onMouseEnter={handleButtonMouseEnter}
+                  onMouseLeave={handleButtonMouseLeave}
                 >
                   📦 Baixar Tudo ▾
                 </button>
@@ -328,12 +345,14 @@ export const Dashboard: React.FC = () => {
                     top: '100%',
                     right: 0,
                     marginTop: '6px',
-                    backgroundColor: 'white',
+                    backgroundColor: 'rgba(8, 13, 26, 0.95)',
+                    backdropFilter: 'blur(20px)',
+                    WebkitBackdropFilter: 'blur(20px)',
                     border: '1px solid var(--border-color)',
-                    borderRadius: 'var(--border-radius-md)',
-                    boxShadow: 'var(--shadow-md)',
+                    borderRadius: 'var(--radius-md)',
+                    boxShadow: 'var(--shadow-lg)',
                     zIndex: 100,
-                    minWidth: '220px',
+                    minWidth: '240px',
                     overflow: 'hidden',
                     display: 'flex',
                     flexDirection: 'column'
@@ -349,9 +368,10 @@ export const Dashboard: React.FC = () => {
                         cursor: 'pointer',
                         fontWeight: 500,
                         color: 'var(--text-primary)',
-                        transition: 'background-color 0.1s'
+                        transition: 'background-color 0.2s',
+                        fontFamily: 'var(--font-secondary)'
                       }}
-                      onMouseEnter={(e) => (e.target as HTMLElement).style.backgroundColor = '#f1f5f9'}
+                      onMouseEnter={(e) => (e.target as HTMLElement).style.backgroundColor = 'rgba(255,255,255,0.06)'}
                       onMouseLeave={(e) => (e.target as HTMLElement).style.backgroundColor = 'transparent'}
                     >
                       🎥 Só vídeos
@@ -367,9 +387,10 @@ export const Dashboard: React.FC = () => {
                         cursor: 'pointer',
                         fontWeight: 500,
                         color: 'var(--text-primary)',
-                        transition: 'background-color 0.1s'
+                        transition: 'background-color 0.2s',
+                        fontFamily: 'var(--font-secondary)'
                       }}
-                      onMouseEnter={(e) => (e.target as HTMLElement).style.backgroundColor = '#f1f5f9'}
+                      onMouseEnter={(e) => (e.target as HTMLElement).style.backgroundColor = 'rgba(255,255,255,0.06)'}
                       onMouseLeave={(e) => (e.target as HTMLElement).style.backgroundColor = 'transparent'}
                     >
                       📝 Vídeos + legendas
@@ -385,9 +406,10 @@ export const Dashboard: React.FC = () => {
                         cursor: 'pointer',
                         fontWeight: 500,
                         color: 'var(--text-primary)',
-                        transition: 'background-color 0.1s'
+                        transition: 'background-color 0.2s',
+                        fontFamily: 'var(--font-secondary)'
                       }}
-                      onMouseEnter={(e) => (e.target as HTMLElement).style.backgroundColor = '#f1f5f9'}
+                      onMouseEnter={(e) => (e.target as HTMLElement).style.backgroundColor = 'rgba(255,255,255,0.06)'}
                       onMouseLeave={(e) => (e.target as HTMLElement).style.backgroundColor = 'transparent'}
                     >
                       📁 Tudo: vídeos + legendas + capas
@@ -396,6 +418,7 @@ export const Dashboard: React.FC = () => {
                 )}
               </div>
 
+              {/* Botão aplicar aleatórias */}
               <button
                 onClick={async () => {
                   try {
@@ -407,65 +430,69 @@ export const Dashboard: React.FC = () => {
                   }
                 }}
                 disabled={videos.length === 0}
-                style={{
-                  backgroundColor: 'white',
-                  border: '1px solid var(--border-color)',
-                  color: 'var(--text-primary)',
-                  padding: '8px 16px',
-                  borderRadius: 'var(--border-radius-md)',
-                  fontSize: '13px',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  opacity: videos.length === 0 ? 0.6 : 1
-                }}
+                style={topButtonStyle}
+                onMouseEnter={handleButtonMouseEnter}
+                onMouseLeave={handleButtonMouseLeave}
               >
-                🎲 Preencher vazios com frases aleatórias
+                🎲 Preencher vazios
               </button>
               
+              {/* Atualizar lista */}
               <button
                 onClick={loadData}
-                style={{
-                  backgroundColor: 'white',
-                  border: '1px solid var(--border-color)',
-                  padding: '8px 16px',
-                  borderRadius: 'var(--border-radius-md)',
-                  fontSize: '13px',
-                  fontWeight: 600,
-                  cursor: 'pointer'
-                }}
+                style={topButtonStyle}
+                onMouseEnter={handleButtonMouseEnter}
+                onMouseLeave={handleButtonMouseLeave}
               >
                 🔄 Atualizar Lista
               </button>
               
+              {/* Salvar frases */}
               <button
                 onClick={handleSaveMetadata}
                 style={{
-                  backgroundColor: 'white',
-                  border: '1px solid var(--accent-blue)',
-                  color: 'var(--accent-blue)',
-                  padding: '8px 16px',
-                  borderRadius: 'var(--border-radius-md)',
-                  fontSize: '13px',
-                  fontWeight: 600,
-                  cursor: 'pointer'
+                  ...topButtonStyle,
+                  border: '1px solid rgba(59, 130, 246, 0.4)',
+                  color: 'var(--accent-cyan)'
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.background = 'rgba(59, 130, 246, 0.08)';
+                  e.currentTarget.style.borderColor = 'rgba(59, 130, 246, 0.6)';
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.04)';
+                  e.currentTarget.style.borderColor = 'rgba(59, 130, 246, 0.4)';
                 }}
               >
                 💾 Salvar Frases
               </button>
               
+              {/* Gerar todos os vídeos */}
               <button
                 onClick={handleRenderAll}
                 disabled={videos.length === 0}
                 style={{
-                  backgroundColor: 'var(--accent-blue)',
+                  background: 'var(--gradient-cyan-blue)',
                   color: 'white',
                   border: 'none',
                   padding: '8px 20px',
-                  borderRadius: 'var(--border-radius-md)',
+                  borderRadius: 'var(--radius-md)',
                   fontSize: '13px',
                   fontWeight: 600,
                   cursor: 'pointer',
-                  opacity: videos.length === 0 ? 0.6 : 1
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  fontFamily: 'var(--font-secondary)',
+                  transition: 'opacity var(--transition-fast), transform var(--transition-fast)',
+                  boxShadow: '0 0 12px rgba(59, 130, 246, 0.25)',
+                  opacity: videos.length === 0 ? 0.5 : 1
+                }}
+                onMouseEnter={e => {
+                  if (videos.length > 0) e.currentTarget.style.opacity = '0.9';
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.opacity = '1';
                 }}
               >
                 🚀 Gerar Todos os Vídeos
@@ -474,7 +501,7 @@ export const Dashboard: React.FC = () => {
           </div>
 
           {loading ? (
-            <div style={{ textAlign: 'center', padding: '40px' }}>Carregando dados da fila local...</div>
+            <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-secondary)' }}>Carregando dados da fila local...</div>
           ) : (
             <VideoTable
               videos={videos}

@@ -1,1 +1,2 @@
-/* Index CSS limpo para evitar conflitos */
+/* index.css — importa o design system completo */
+@import './styles/globals.css';

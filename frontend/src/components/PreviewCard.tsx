@@ -29,23 +29,28 @@ export const PreviewCard: React.FC<PreviewCardProps> = ({
 }) => {
   const nameToDisplay = brandName && brandName.trim() ? brandName.trim() : "Nome do Perfil";
   const handleToDisplay = brandHandle && brandHandle.trim() ? brandHandle.trim() : "@seuperfil";
+  
   return (
     <div style={{
       backgroundColor: 'var(--bg-secondary)',
-      borderRadius: 'var(--border-radius-lg)',
+      borderRadius: 'var(--radius-xl)',
       padding: '24px',
       border: '1px solid var(--border-color)',
-      boxShadow: 'var(--shadow-sm)',
+      boxShadow: 'var(--shadow-md)',
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',
-      gap: '15px'
+      gap: '16px',
+      backdropFilter: 'var(--blur-sm)',
+      WebkitBackdropFilter: 'var(--blur-sm)'
     }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
-        <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 600 }}>Pré-visualização do Layout</h3>
+        <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)', fontFamily: 'var(--font-primary)' }}>
+          Pré-visualização do Layout
+        </h3>
         {selectedVideoFilename && (
-          <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 500 }}>
-            Arquivo: <strong>{selectedVideoFilename}</strong>
+          <span style={{ fontSize: '11px', color: 'var(--accent-cyan)', fontWeight: 600 }}>
+            🎬 {selectedVideoFilename}
           </span>
         )}
       </div>
@@ -55,15 +60,16 @@ export const PreviewCard: React.FC<PreviewCardProps> = ({
         <div style={{
           display: 'flex',
           alignItems: 'center',
-          gap: '8px',
-          backgroundColor: '#f1f5f9',
+          gap: '4px',
+          backgroundColor: 'rgba(255, 255, 255, 0.04)',
           padding: '4px',
-          borderRadius: 'var(--border-radius-md)',
+          borderRadius: 'var(--radius-md)',
           width: '100%',
-          justifyContent: 'center'
+          justifyContent: 'center',
+          border: '1px solid var(--border-color)'
         }}>
-          <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-secondary)', marginRight: '8px' }}>
-            Visualização:
+          <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', marginRight: '8px', marginLeft: '6px' }}>
+            Visualizar:
           </span>
           <button
             onClick={() => onPreviewModeChange?.("input")}
@@ -71,14 +77,15 @@ export const PreviewCard: React.FC<PreviewCardProps> = ({
               flex: 1,
               padding: '6px 12px',
               border: 'none',
-              borderRadius: 'var(--border-radius-sm)',
+              borderRadius: 'var(--radius-sm)',
               fontSize: '11px',
               fontWeight: 600,
               cursor: 'pointer',
-              backgroundColor: previewMode === "input" ? 'white' : 'transparent',
+              backgroundColor: previewMode === "input" ? 'rgba(255,255,255,0.08)' : 'transparent',
               color: previewMode === "input" ? 'var(--text-primary)' : 'var(--text-secondary)',
-              boxShadow: previewMode === "input" ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
-              transition: 'all 0.1s'
+              boxShadow: previewMode === "input" ? '0 1px 3px rgba(0,0,0,0.2)' : 'none',
+              transition: 'all 0.2s',
+              fontFamily: 'var(--font-secondary)'
             }}
           >
             Original
@@ -94,18 +101,19 @@ export const PreviewCard: React.FC<PreviewCardProps> = ({
               flex: 1,
               padding: '6px 12px',
               border: 'none',
-              borderRadius: 'var(--border-radius-sm)',
+              borderRadius: 'var(--radius-sm)',
               fontSize: '11px',
               fontWeight: 600,
               cursor: hasOutput ? 'pointer' : 'not-allowed',
-              backgroundColor: previewMode === "output" ? 'white' : 'transparent',
+              backgroundColor: previewMode === "output" ? 'rgba(255,255,255,0.08)' : 'transparent',
               color: previewMode === "output" 
                 ? 'var(--text-primary)' 
                 : hasOutput 
                   ? 'var(--text-secondary)' 
-                  : '#cbd5e1',
-              boxShadow: previewMode === "output" ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
-              transition: 'all 0.1s'
+                  : 'var(--text-muted)',
+              boxShadow: previewMode === "output" ? '0 1px 3px rgba(0,0,0,0.2)' : 'none',
+              transition: 'all 0.2s',
+              fontFamily: 'var(--font-secondary)'
             }}
             title={!hasOutput ? "Gere o vídeo para visualizar o resultado final." : ""}
           >
@@ -118,8 +126,8 @@ export const PreviewCard: React.FC<PreviewCardProps> = ({
       <div style={{
         width: '280px',
         height: '497px',
-        border: '8px solid #0f172a',
-        borderRadius: '36px',
+        border: '10px solid #1e293b',
+        borderRadius: '38px',
         backgroundColor: '#ffffff',
         boxShadow: 'var(--shadow-lg)',
         position: 'relative',
@@ -132,7 +140,7 @@ export const PreviewCard: React.FC<PreviewCardProps> = ({
         <div style={{
           width: '110px',
           height: '18px',
-          backgroundColor: '#0f172a',
+          backgroundColor: '#1e293b',
           borderBottomLeftRadius: '12px',
           borderBottomRightRadius: '12px',
           margin: '0 auto',
@@ -191,7 +199,8 @@ export const PreviewCard: React.FC<PreviewCardProps> = ({
               gap: '3px',
               wordBreak: 'break-word',
               maxWidth: '190px',
-              lineHeight: 1.2
+              lineHeight: 1.2,
+              color: '#0f172a'
             }}>
               {nameToDisplay}
               {isVerified && (
